@@ -1,8 +1,11 @@
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:image/image.dart' as img;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:pixelart/main.dart';
 
 // struct of image, contains pixel data, width, height, and name
 class Image {
@@ -10,31 +13,69 @@ class Image {
   String name;
   int width;
   int height;
-  List<List<Pixel>> pixels =
-      List.generate(128, (i) => List.generate(128, (j) => Pixel(Colors.white)));
+  String path = "";
+  List<List<Pixel>> pixels;
 
   void updatePixel(int row, int col, Color color) {
     pixels[row][col].color = color;
   }
+
+  List<int> saveAsPng() {
+    var png = img.Image(width: width, height: height, numChannels: 4);
+
+    for (int i = 0; i < pixels.length; i++) {
+      for (int j = 0; j < pixels[i].length; j++) {
+        debugPrint(pixels[i][j].color.value.toString());
+        png.setPixelRgba(j, i, pixels[i][j].color.red, pixels[i][j].color.green,
+            pixels[i][j].color.blue, pixels[i][j].color.alpha);
+      }
+    }
+    return img.encodePng(png);
+  }
+}
+
+List<List<Pixel>> loadFromPng(List<int> bytes) {
+    Uint8List uint8list = Uint8List.fromList(bytes);
+    img.Image png = img.decodeImage(uint8list)!;
+
+    List<List<Pixel>> pixels = List.generate(
+        png.height,
+        (i) => List.generate(png.width, (j) {
+            // Get the pixel from the png object
+            img.Pixel pixel = png.getPixel(j, i);
+
+            // Get the rgba channels from the pixel
+            int r = pixel.r.toInt();
+            int g = pixel.g.toInt();
+            int b = pixel.b.toInt();
+            int a = pixel.a.toInt();
+            
+            // Create a Color object
+            ui.Color color = ui.Color.fromARGB(a, r, g, b);
+
+            return Pixel(color, empty: false);
+        }));
+    
+    return pixels;
 }
 
 // struct of pixel, contains color
 class Pixel {
-  Pixel(this.color);
+  Pixel(this.color, {this.empty = false});
   ui.Color color;
+  bool empty;
 }
 
 // painter class, contains image and paint function. IS ALWAYS SQUARE
 class Painter extends StatefulWidget {
-  final Image image;
 
-  const Painter({super.key, required this.image});
+  const Painter({super.key});
   @override
   // ignore: library_private_types_in_public_api
   _PainterState createState() => _PainterState();
 }
 
-enum Tool { brush, eraser, rectangle, line, circle, fill }
+enum Tool { brush, eraser, rectangle, line, circle, fill, pick }
 
 class _PainterState extends State<Painter> {
   // variables
@@ -49,19 +90,19 @@ class _PainterState extends State<Painter> {
   bool showGrid = false;
   bool _isPainting = false;
   Color _color = Colors.black;
-  Color _backgroundColor = Colors.grey;
-  List<List<Pixel>> _pixels =
-      List.generate(128, (i) => List.generate(128, (j) => Pixel(Colors.white)));
-
-  void editPixel(col, row) {
+  Color _backgroundColor = Colors.transparent;
+  List<List<Pixel>> _pixels = [];
+  
+  Image editPixel(int selected, int col, int row) {
     switch (tool) {
       case Tool.brush:
         _pixels[row][col].color = _color;
-        
+        sprites[selected].pixels = _pixels;
         break;
       case Tool.eraser:
         setState(() {
           _pixels[row][col].color = Colors.transparent;
+          sprites[selected].pixels = _pixels;
         });
         break;
       case Tool.rectangle:
@@ -75,7 +116,7 @@ class _PainterState extends State<Painter> {
             _y = row.toDouble();
           } else {
             // draw line from initial to final
-            
+
             for (int i = min(_initialX, _x).toInt();
                 i < max(_initialX, _x).toInt();
                 i++) {
@@ -85,6 +126,8 @@ class _PainterState extends State<Painter> {
                 _pixels[j][i].color = _color;
               }
             }
+            
+        sprites[selected].pixels = _pixels;
 
             _initialX = -1;
             _initialY = -1;
@@ -95,17 +138,59 @@ class _PainterState extends State<Painter> {
         break;
       case Tool.fill:
         setState(() {
-          
+          List<List<Pixel>> newPixels = List.generate(
+              sprites[selected].height,
+              (i) => List.generate(sprites[selected].width,
+                  (j) => Pixel(Colors.transparent, empty: true)));
+          List<List<bool>> visited = List.generate(sprites[selected].height,
+              (i) => List.generate(sprites[selected].width, (j) => false));
+          List<List<int>> queue = [];
+          queue.add([row, col]);
+          while (queue.isNotEmpty) {
+            List<int> current = queue.removeAt(0);
+            int r = current[0];
+            int c = current[1];
+            if (r < 0 || r >= sprites[selected].height) continue;
+            if (c < 0 || c >= sprites[selected].width) continue;
+            if (visited[r][c]) continue;
+            visited[r][c] = true;
+            if (_pixels[r][c].color == _pixels[row][col].color) {
+              newPixels[r][c].color = _color;
+              newPixels[r][c].empty = false;
+              queue.add([r + 1, c]);
+              queue.add([r - 1, c]);
+              queue.add([r, c + 1]);
+              queue.add([r, c - 1]);
+            } else {
+              newPixels[r][c].color = _pixels[r][c].color;
+            }
+          }
+
+          for (int i = 0; i < sprites[selected].height; i++) {
+            for (int j = 0; j < sprites[selected].width; j++) {
+              if (newPixels[i][j].empty) {
+                newPixels[i][j].color = _pixels[i][j].color;
+                newPixels[i][j].empty = false;
+              }
+            }
+          }
+          _pixels = newPixels;
+          sprites[selected].pixels = _pixels;
+        });
+        break;
+      case Tool.pick:
+        setState(() {
+          _color = _pixels[row][col].color;
         });
         break;
     }
+    return sprites[selected];
   }
 
   // init function
   @override
   void initState() {
     super.initState();
-    _pixels = widget.image.pixels;
   }
 
   // paint function
@@ -116,247 +201,232 @@ class _PainterState extends State<Painter> {
     _height = MediaQuery.of(context).size.height;
 
     // return widget
-    return Container(
-      color: _backgroundColor,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            color: Theme.of(context).colorScheme.surface,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Row(children: [
-                    IconButton(
-                      icon: Icon(Icons.brush),
-                      onPressed: () {
-                        // toggle brush size
-                        setState(() {
-                          if (brushSize == 1) {
-                            brushSize = 5;
-                          } else {
-                            brushSize = 1;
-                          }
-                        });
-                      },
-                    ),
-                    Slider(
-                        value: brushSize,
-                        onChanged: (value) {
-                          setState(() {
-                            brushSize = value;
-                          });
-                        },
-                        onChangeEnd: (value) {
-                          // unfocus slider
-                          FocusScope.of(context).requestFocus(new FocusNode());
-                        },
-                        min: 1,
-                        max: 10,
-                        divisions: 9,
-                        label: brushSize.toString()),
-                  ]),
-                ),
-                Expanded(
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
+    return ValueListenableBuilder(
+      valueListenable: imageSelected,
+      builder: (_, selected, __) {
+        _pixels = sprites[selected].pixels;
+        return Container(
+        color: _backgroundColor,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              color: Theme.of(context).colorScheme.surface,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Row(children: [
                       IconButton(
-                        icon: Icon(Icons.color_lens),
-                        onPressed: () {
-                          showDialog(
-                              context: context,
-                              builder: (context) {
-                                return AlertDialog(
-                                  title: const Text("Select a color!"),
-                                  content: SingleChildScrollView(
-                                    child: ColorPicker(
-                                      portraitOnly: true,
-                                      pickerAreaHeightPercent: 0.5,
-                                      labelTypes: const [ColorLabelType.rgb],
-                                      enableAlpha: false,
-                                      pickerColor: _color,
-                                      onColorChanged: (color) {
-                                        setState(() {
-                                          _color = color;
-                                        });
-                                      },
+                        icon: const Icon(Icons.brush),
+                        onPressed: tool != Tool.fill
+                            ? () {
+                                // toggle brush size
+                                setState(() {
+                                  if (brushSize == 1) {
+                                    brushSize = 5;
+                                  } else {
+                                    brushSize = 1;
+                                  }
+                                });
+                              }
+                            : null,
+                      ),
+                      Slider(
+                          value: brushSize,
+                          onChanged: (value) {
+                            setState(() {
+                              brushSize = value;
+                            });
+                          },
+                          onChangeEnd: (value) {
+                            // unfocus slider
+                            FocusScope.of(context).requestFocus(FocusNode());
+                          },
+                          min: 1,
+                          max: 10,
+                          divisions: 9,
+                          label: brushSize.toString()),
+                    ]),
+                  ),
+                  Expanded(
+                      child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                        IconButton(
+                          icon: const Icon(Icons.color_lens),
+                          onPressed: () {
+                            showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: const Text("Select a color!"),
+                                    content: SingleChildScrollView(
+                                      child: ColorPicker(
+                                        portraitOnly: true,
+                                        pickerAreaHeightPercent: 0.5,
+                                        labelTypes: const [ColorLabelType.rgb],
+                                        enableAlpha: true,
+                                        pickerColor: _color,
+                                        onColorChanged: (color) {
+                                          setState(() {
+                                            _color = color;
+                                          });
+                                        },
+                                      ),
                                     ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: Text("Close"),
-                                    ),
-                                  ],
-                                );
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: const Text("Close"),
+                                      ),
+                                    ],
+                                  );
+                                });
+                          },
+                        ),
+                        // TODO: implement pick tool
+                        // IconButton(
+                        //   isSelected: tool == Tool.pick,
+                        //   icon: const Icon(Icons.colorize_rounded),
+                        //   onPressed: () {
+                        //     setState(() {
+                        //       tool = Tool.pick;
+                        //     });
+                        //   },
+                        // ),
+                        IconButton(
+                          isSelected: showGrid,
+                          icon: const Icon(Icons.grid_3x3),
+                          onPressed: () {
+                            setState(() {
+                              showGrid = !showGrid;
+                            });
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_paint_rounded),
+                          onPressed: () {
+                            // toggle background color
+                            setState(() {
+                              if (_backgroundColor == Colors.grey) {
+                                // if brightness is bright, use white.
+                                _backgroundColor = Colors.transparent;
+                              } else {
+                                _backgroundColor = Colors.grey;
+                              }
+                            });
+                          },
+                        ),
+                      ])),
+                  Expanded(
+                      child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                        // eraser
+                        IconButton(
+                            isSelected: tool == Tool.eraser,
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              setState(() {
+                                tool = Tool.eraser;
                               });
-                        },
-                      ),
-                      IconButton(isSelected: showGrid, icon: Icon(Icons.grid_3x3), onPressed: () {
-                        setState(() {
-                          showGrid = !showGrid;
-                        });
-                      },),
-                      IconButton(
-                        icon: Icon(Icons.format_paint_rounded),
-                        onPressed: () {
-                          // toggle background color
+                            }),
+                        IconButton(
+                            isSelected: tool == Tool.brush,
+                            icon: const Icon(Icons.brush),
+                            onPressed: () {
+                              setState(() {
+                                tool = Tool.brush;
+                              });
+                            }),
+                        IconButton(
+                            isSelected: tool == Tool.fill,
+                            icon: const Icon(Icons.format_color_fill),
+                            onPressed: () {
+                              setState(() {
+                                tool = Tool.fill;
+                              });
+                            }),
+                      ]))
+                ],
+              ),
+            ),
+            SizedBox(
+              // use the smaller dimension
+              width: min(_width, _height) - 88,
+              height: min(_width, _height) - 88,
+              child: Container(
+                color: _backgroundColor,
+                child: Center(
+                  child: SizedBox(
+                    width: min(_width, _height) - 88,
+                    height: min(_width, _height) - 88,
+                    child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onPanStart: (details) {
                           setState(() {
-                            if (_backgroundColor == Colors.grey) {
-                              // if brightness is bright, use white.
-                              _backgroundColor = Theme.of(context).brightness ==
-                                      Brightness.light
-                                  ? const ui.Color.fromARGB(255, 255, 255, 255)
-                                  : const ui.Color.fromARGB(0, 69, 69, 69);
-                            } else {
-                              _backgroundColor = Colors.grey;
-                            }
+                            _isPainting = true;
+                            var list = spriteBefore.value;
+                            list.insert(0, sprites[selected]);
+                            spriteBefore.value = list;
+                            spriteRedo.value = [];
+                            sprites[selected] = doPaint(details.localPosition, selected);
+                            sprites[selected].pixels = _pixels;
                           });
                         },
-                      ),
-                    ])),
-                Expanded(
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                      // eraser
-                      IconButton(
-                          isSelected: tool == Tool.eraser,
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            setState(() {
-                              tool = Tool.eraser;
-                            });
-                          }),
-                      IconButton(
-                          isSelected: tool == Tool.brush,
-                          icon: const Icon(Icons.brush),
-                          onPressed: () {
-                            setState(() {
-                              tool = Tool.brush;
-                            });
-                          }),
-                      // IconButton(
-                      //     isSelected: tool == Tool.rectangle,
-                      //     icon: const Icon(Icons.rectangle),
-                      //     onPressed: () {
-                      //       setState(() {
-                      //         tool = Tool.rectangle;
-                      //       });
-                      //     }),
-                      // IconButton(
-                      //     isSelected: tool == Tool.line,
-                      //     icon: const Icon(Icons.line_weight),
-                      //     onPressed: () {
-                      //       setState(() {
-                      //         tool = Tool.line;
-                      //       });
-                      //     }),
-                      // IconButton(
-                      //     isSelected: tool == Tool.circle,
-                      //     icon: const Icon(Icons.circle),
-                      //     onPressed: () {
-                      //       setState(() {
-                      //         tool = Tool.circle;
-                      //       });
-                      //     }),
-                      // IconButton(
-                      //     isSelected: tool == Tool.fill,
-                      //     icon: const Icon(Icons.format_color_fill),
-                      //     onPressed: () {
-                      //       setState(() {
-                      //         tool = Tool.fill;
-                      //       });
-                      //     }),
-                    ]))
-              ],
-            ),
-          ),
-          SizedBox(
-            // use the smaller dimension
-            width: min(_width, _height) - 144,
-            height: min(_width, _height) - 144,
-            child: Container(
-              color: _backgroundColor,
-              child: Center(
-                child: SizedBox(
-                  width: min(_width, _height) - 144,
-                  height: min(_width, _height) - 144,
-                  child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (details) {
-                        setState(() {
-                          _isPainting = true;
-                          _x = details.localPosition.dx;
-                          _y = details.localPosition.dy;
-                          double maxSize = min(_width, _height) - 144;
-                          int row =
-                              (_y / maxSize * widget.image.height).floor();
-                          int col = (_x / maxSize * widget.image.width).floor();
-                          row = max(0, row);
-                          row = min(widget.image.width - 1, row);
-                          col = max(0, col);
-                          col = min(widget.image.height - 1, col);
-                          if (brushSize == 1) {
-                            editPixel(col, row);
-                          } else {
-                            // initialize drawExtra with empty list the size of brushSize
-                            for (int i = 0; i < brushSize; i++) {
-                              for (int j = 0; j < brushSize; j++) {
-                                if (row + i >= widget.image.height) continue;
-                                if (col + j >= widget.image.width) continue;
-                                editPixel(col, row);
-                              }
-                            }
-                          }
-                        });
-                      },
-                      onPanUpdate: (details) {
-                        setState(() {
-                          _x = details.localPosition.dx;
-                          _y = details.localPosition.dy;
-                          double maxSize = min(_width, _height) - 144;
-                          int row =
-                              (_y / maxSize * widget.image.height).floor();
-                          int col = (_x / maxSize * widget.image.width).floor();
-                          row = max(0, row);
-                          row = min(widget.image.width - 1, row);
-                          col = max(0, col);
-                          col = min(widget.image.height - 1, col);
-                          if (brushSize == 1) {
-                            editPixel(col, row);
-                          } else {
-                            // initialize drawExtra with empty list the size of brushSize
-                            for (int i = 0; i < brushSize; i++) {
-                              for (int j = 0; j < brushSize; j++) {
-                                if (row + i >= widget.image.height) continue;
-                                if (col + j >= widget.image.width) continue;
-                                editPixel(col, row);
-                              }
-                            }
-                          }
-                        });
-                      },
-                      onPanEnd: (details) {
-                        setState(() {
-                          _isPainting = false;
-                        });
-                      },
-                      child: CustomPaint(
-                          painter: PainterWidget(_pixels, showGrid),
-                          size: Size(_width > _height ? _height : _width,
-                              _width > _height ? _height : _width))),
+                        onPanUpdate: (details) {
+                          setState(() {
+                            sprites[selected] = doPaint(details.localPosition, selected);
+                            sprites[selected].pixels = _pixels;
+                          });
+                        },
+                        onPanEnd: (details) {
+                          setState(() {
+                            _isPainting = false;
+                          });
+                        },
+                        child: CustomPaint(
+                            painter: PainterWidget(_pixels, showGrid),
+                            size: Size(_width > _height ? _height : _width,
+                                _width > _height ? _height : _width))),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      );
+      }
     );
+  }
+
+  Image doPaint(Offset localPosition, selected) {
+    _x = localPosition.dx;
+    _y = localPosition.dy;
+    double maxSize = min(_width, _height) - 88;
+    int row = (_y / maxSize * sprites[selected].height).floor();
+    int col = (_x / maxSize * sprites[selected].width).floor();
+    row = max(0, row);
+    row = min(sprites[selected].width - 1, row);
+    col = max(0, col);
+    col = min(sprites[selected].height - 1, col);
+    if (brushSize == 1) {
+      sprites[selected] = editPixel(selected, col, row);
+      return sprites[selected];
+    } else {
+      // initialize drawExtra with empty list the size of brushSize
+      for (int i = 0; i < brushSize; i++) {
+        for (int j = 0; j < brushSize; j++) {
+          if (row + i >= sprites[selected].height) continue;
+          if (col + j >= sprites[selected].width) continue;
+          sprites[selected] = editPixel(selected, col + j, row + i);
+        }
+      }
+    }
+    return sprites[selected];
   }
 }
 
@@ -367,24 +437,31 @@ class PainterWidget extends CustomPainter {
   bool grid;
   @override
   void paint(Canvas canvas, Size size) {
+    // draw border
+    Paint borderPaint = Paint();
+    borderPaint.color = Colors.black;
+    borderPaint.style = PaintingStyle.stroke;
+    borderPaint.strokeWidth = 1;
+    canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.width, size.height), borderPaint);
     // draw grid
     if (grid) {
-for (int i = 0; i < pixels.length; i++) {
-      for (int j = 0; j < pixels[i].length; j++) {
-        Paint paint = Paint();
-        paint.color = Colors.black;
-        paint.style = PaintingStyle.stroke;
-        paint.strokeWidth = .01;
-        canvas.drawRect(
-          Rect.fromLTWH(
-              j * size.width / pixels[j].length,
-              i * size.height / pixels.length,
-              size.width / pixels[j].length,
-              size.height / pixels.length),
-          paint,
-        );
+      for (int i = 0; i < pixels.length; i++) {
+        for (int j = 0; j < pixels[i].length; j++) {
+          Paint paint = Paint();
+          paint.color = Colors.black;
+          paint.style = PaintingStyle.stroke;
+          paint.strokeWidth = .05;
+          canvas.drawRect(
+            Rect.fromLTWH(
+                j * size.width / pixels[j].length,
+                i * size.height / pixels.length,
+                size.width / pixels[j].length,
+                size.height / pixels.length),
+            paint,
+          );
+        }
       }
-    }
     }
     // draw pixels
     for (int i = 0; i < pixels.length; i++) {
