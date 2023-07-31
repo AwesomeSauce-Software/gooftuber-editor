@@ -1,4 +1,3 @@
-
 import 'dart:math';
 
 import 'package:dynamic_color/dynamic_color.dart';
@@ -71,38 +70,25 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   bool isEnabled() {
-    return sprites.isNotEmpty && imageSelected >= 0;
+    return sprites.isNotEmpty && imageSelected.value >= 0;
   }
 
   painter.Image createRandom() {
     var rng = Random();
     var width = rng.nextInt(128) + 1;
     var height = rng.nextInt(128) + 1;
-    var pixels = List.generate(width, (i) => List.generate(height, (j) => painter.Pixel(Colors.white)));
+    var pixels = List.generate(width,
+        (i) => List.generate(height, (j) => painter.Pixel(Colors.white)));
     for (var i = 0; i < width; i++) {
       for (var j = 0; j < height; j++) {
-        pixels[i][j].color = Color.fromARGB(255, rng.nextInt(255), rng.nextInt(255), rng.nextInt(255));
+        pixels[i][j].color = Color.fromARGB(
+            255, rng.nextInt(255), rng.nextInt(255), rng.nextInt(255));
       }
     }
     return painter.Image('Random Image', width, height, pixels);
   }
 
-  var imageSelected = 0;
-
-  Widget pixelArtEditor() {
-    if (sprites.length == 0) {
-      return const Center(
-        child: Text('No images found'),
-      );
-    }
-    if (imageSelected < 0) {
-      imageSelected = 0;
-    }
-    // build pixel art editor
-    return painter.Painter(image: sprites[imageSelected]);
-
-  }
-
+  ValueNotifier<int> imageSelected = ValueNotifier(0);
   var nameController = TextEditingController();
   var wxhController = TextEditingController();
 
@@ -168,8 +154,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ],
                       textAlign: TextAlign.center,
                       controller: wxhController,
-                      onSubmitted: (String value) {
-                      },
+                      onSubmitted: (String value) {},
                     ),
                   ),
                   IconButton(
@@ -192,11 +177,21 @@ class _MyHomePageState extends State<MyHomePage> {
                     icon: const Icon(Icons.add),
                     onPressed: () {
                       setState(() {
-                    sprites.add(painter.Image('New Image', int.parse(wxhController.text), int.parse(wxhController.text), [
-                      for (var i = 0; i < int.parse(wxhController.text); i++)
-                        [for (var j = 0; j < int.parse(wxhController.text); j++) painter.Pixel(Colors.transparent)]
-                    ]));
-                  });
+                        sprites.add(painter.Image(
+                            'New Image',
+                            int.parse(wxhController.text),
+                            int.parse(wxhController.text), [
+                          for (var i = 0;
+                              i < int.parse(wxhController.text);
+                              i++)
+                            [
+                              for (var j = 0;
+                                  j < int.parse(wxhController.text);
+                                  j++)
+                                painter.Pixel(Colors.transparent)
+                            ]
+                        ]));
+                      });
                     },
                   ),
                 ],
@@ -225,7 +220,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   onFieldSubmitted();
                   // update name
                   setState(() {
-                    sprites[imageSelected].name = value;
+                    sprites[imageSelected.value].name = value;
                   });
                 },
               );
@@ -273,26 +268,41 @@ class _MyHomePageState extends State<MyHomePage> {
               });
             },
           ),
-          Expanded(child: pixelArtEditor()),
+          Expanded(
+              child: ValueListenableBuilder(
+                  valueListenable: imageSelected,
+                  builder: (context, spriteSelected, _) {
+                    if (sprites.isEmpty) {
+                      return const Center(
+                        child: Text('No images found'),
+                      );
+                    }
+                    if (spriteSelected < 0) {
+                      spriteSelected = 0;
+                    }
+                    // build pixel art editor
+                    return painter.Painter(image: sprites[spriteSelected]);
+                  })),
           Drawer(
             elevation: 0,
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.all(Radius.circular(0)),
             ),
             backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
-            child: ListView(padding: EdgeInsets.zero, children: <Widget>[
+            child: ValueListenableBuilder(valueListenable: imageSelected, builder: (context, spriteSelected, _) {
+              return ListView(padding: EdgeInsets.zero, children: <Widget>[
               for (var i = 0; i < sprites.length; i++)
                 ListTile(
-                  leading: i == imageSelected
+                  leading: i == imageSelected.value
                       ? const Icon(Icons.radio_button_checked)
                       : const Icon(Icons.radio_button_off),
                   trailing: IconButton(
-                    icon: Icon(Icons.delete),
+                    icon: const Icon(Icons.delete),
                     onPressed: () {
                       setState(() {
                         sprites.removeAt(i);
-                        if (imageSelected >= sprites.length) {
-                          imageSelected = sprites.length - 1;
+                        if (imageSelected.value >= sprites.length) {
+                          imageSelected.value = sprites.length - 1;
                         }
                         if (sprites.isEmpty) {
                           nameController.text = '';
@@ -302,12 +312,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   title: Text(sprites[i].name),
                   onTap: () {
-                    setState(() {
-                      imageSelected = i;
-                    });
+                    imageSelected.value = i;
                   },
                 ),
-            ]),
+            ]);
+            }) 
           )
         ],
       )),
