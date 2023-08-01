@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
-
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:pixelart/painter.dart' as painter;
+import 'package:pixelart/tools/platformtools.dart';
+import 'package:pixelart/tools/webtools.dart';
 
 import '../dialogs.dart';
 import '../main.dart';
@@ -70,6 +72,12 @@ Future<void> exportFile(BuildContext context, String json) async {
     showSnackbar(context, 'Sprites are empty, nothing to export!');
     return;
   }
+
+  if (isPlatformWeb()) {
+    saveFileOnWeb(Uint8List.fromList(utf8.encode(json)), 'avatar.avatar');
+    return;
+  }
+
   String? outputFile = await FilePicker.platform.saveFile(
       dialogTitle: 'Export Avatar',
       allowedExtensions: ['avatar'],
@@ -98,10 +106,15 @@ Future<List<painter.Image>> importFile(context) async {
   if (result == null) {
     return [];
   }
-
-  File file = File(result.files.single.path!);
+  if (isPlatformWeb()) {
+    // parse result.files.single.bytes to string
+    var text = utf8.decode(result.files.single.bytes!);
+    return importJson(context, text);
+  } else {
+    File file = File(result.files.single.path!);
   String json = await file.readAsString();
   return importJson(context, json);
+  }
 }
 
 Future<void> saveFile(bool overidePath) async {
@@ -112,6 +125,19 @@ Future<void> saveFile(bool overidePath) async {
   if (imageSelected.value < 0) {
     imageSelected.value = 0;
   }
+
+  if (isPlatformWeb()) {
+    var name = sprites[imageSelected.value].name;
+  if (sprites[imageSelected.value].frameType == painter.FrameTypes.talking) {
+    name = 'talking';
+  } else if (sprites[imageSelected.value].frameType ==
+      painter.FrameTypes.nontalking) {
+    name = 'nontalking';
+  }
+    saveFileOnWeb(Uint8List.fromList(sprites[imageSelected.value].saveAsPng()), '$name.png');
+    return;
+  }
+
   if (!overidePath && sprites[imageSelected.value].path != '') {
     List<int> bytes = sprites[imageSelected.value].saveAsPng();
     await File(sprites[imageSelected.value].path).writeAsBytes(bytes);
