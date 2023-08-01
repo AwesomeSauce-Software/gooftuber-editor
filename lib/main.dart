@@ -234,6 +234,21 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   }
 
   Widget bottomBar() {
+        if (isPlatformWeb()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+      // right aligned snackbar
+      SnackBar(
+        content: const Text('This is a web version of the app. It is not fully supported and might be painfully slow. Please use the desktop version instead.'),
+        duration: const Duration(hours: 1),
+        action: SnackBarAction(
+          label: 'Close',
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        )
+      ),
+    );
+    }
     return Row(
       children: [
         Expanded(
