@@ -1,21 +1,16 @@
-import 'dart:io';
-
 import 'package:dynamic_color/dynamic_color.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pixelart/dialogs.dart';
 import 'package:pixelart/painter.dart' as painter;
+import 'package:pixelart/tools/jsonexport.dart';
 import 'package:pixelart/tools/platformtools.dart';
+import 'package:pixelart/tools/sprite_tools.dart';
+import 'package:pixelart/view_sprites.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 
-// TODO: Make names unique
-// TODO: When copying, make sure to copy the name too and append (copy) to it
-// TODO: Add primary toggle when adding/editing which is the default frame
-// TODO: Add expression toggle which is used for expressions, adds primary frame as background and allows you to draw on top of it
-// TODO: Add json exporting of all frames
-// TODO: Add json importing of all frames
-// TODO: Add preview of all frames
+// TODO: Fix copying
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +25,8 @@ Future<void> main() async {
     windowManager.setTitle('Gooftuber Avatar Editor');
   }
 }
+
+enum Pages { editor, view }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -93,6 +90,7 @@ class _MyHomePageState extends State<MyHomePage> {
       } else if (event.isControlPressed &&
           event.isKeyPressed(LogicalKeyboardKey.keyS)) {
         // save
+        if (currentPage != Pages.editor) return;
         saveFile(event.isShiftPressed);
       } else if (event.isControlPressed &&
           event.isKeyPressed(LogicalKeyboardKey.keyL)) {
@@ -148,6 +146,8 @@ class _MyHomePageState extends State<MyHomePage> {
   var navRailVisible = true;
   var picturesVisible = true;
 
+  var currentPage = Pages.editor;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -160,6 +160,7 @@ class _MyHomePageState extends State<MyHomePage> {
         children: [
           if (navRailVisible)
             NavigationRail(
+              // groupAlignment: 0,
               labelType: NavigationRailLabelType.all,
               // color selected chip
               destinations: const <NavigationRailDestination>[
@@ -180,36 +181,51 @@ class _MyHomePageState extends State<MyHomePage> {
                   label: Text('Export'),
                 ),
               ],
-              selectedIndex: 0,
+              selectedIndex: currentPage.index,
               useIndicator: true,
               onDestinationSelected: (int index) async {
                 if (index == 0) {
                   // editor
+                  setState(() {
+                    currentPage = Pages.editor;
+                  });
                 } else if (index == 1) {
                   // view
+                  setState(() {
+                    currentPage = Pages.view;
+                  });
                 } else if (index == 2) {
-                  // import
-                } else if (index == 3) {}
+                  var newSprites = await importFile(context);
+                  setState(() {
+                    sprites = newSprites;
+                  });
+                } else if (index == 3) {
+                  String json = exportJson(sprites);
+                  exportFile(context, json);
+                }
               },
             ),
           if (navRailVisible) const VerticalDivider(width: 1),
-          Expanded(
-              child: ValueListenableBuilder(
-                  valueListenable: imageSelected,
-                  builder: (context, spriteSelected, _) {
-                    if (sprites.isEmpty) {
-                      return const Center(
-                        child: Text('No images found'),
-                      );
-                    }
-                    if (spriteSelected < 0) {
-                      spriteSelected = 0;
-                    }
-                    // build pixel art editor
-                    return const painter.Painter();
-                  })),
-          if (picturesVisible) const VerticalDivider(width: 1),
-          if (picturesVisible) drawer(context)
+          if (currentPage == Pages.editor)
+            Expanded(
+                child: ValueListenableBuilder(
+                    valueListenable: imageSelected,
+                    builder: (context, spriteSelected, _) {
+                      if (sprites.isEmpty) {
+                        return const Center(
+                          child: Text('No images found'),
+                        );
+                      }
+                      if (spriteSelected < 0) {
+                        spriteSelected = 0;
+                      }
+                      // build pixel art editor
+                      return const painter.Painter();
+                    })),
+          if (currentPage == Pages.view) Expanded(child: const SpritePreview()),
+          if (picturesVisible && currentPage == Pages.editor)
+            const VerticalDivider(width: 1),
+          if (picturesVisible && currentPage == Pages.editor) drawer(context)
         ],
       )),
     );
@@ -231,22 +247,24 @@ class _MyHomePageState extends State<MyHomePage> {
                   });
                 },
               ),
-              ValueListenableBuilder(
-                  valueListenable: spriteBefore,
-                  builder: (_, sprite, ___) {
-                    return IconButton(
-                      icon: const Icon(Icons.undo),
-                      onPressed: (sprite.isNotEmpty) ? undo : null,
-                    );
-                  }),
-              ValueListenableBuilder(
-                  valueListenable: spriteRedo,
-                  builder: (_, sprite, ___) {
-                    return IconButton(
-                      icon: const Icon(Icons.redo),
-                      onPressed: (sprite.isNotEmpty) ? redo : null,
-                    );
-                  }),
+              if (currentPage == Pages.editor)
+                ValueListenableBuilder(
+                    valueListenable: spriteBefore,
+                    builder: (_, sprite, ___) {
+                      return IconButton(
+                        icon: const Icon(Icons.undo),
+                        onPressed: (sprite.isNotEmpty) ? undo : null,
+                      );
+                    }),
+              if (currentPage == Pages.editor)
+                ValueListenableBuilder(
+                    valueListenable: spriteRedo,
+                    builder: (_, sprite, ___) {
+                      return IconButton(
+                        icon: const Icon(Icons.redo),
+                        onPressed: (sprite.isNotEmpty) ? redo : null,
+                      );
+                    }),
             ],
           ),
         ),
@@ -254,19 +272,20 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ValueListenableBuilder(
-                  valueListenable: updater,
-                  builder: (_, __, ___) {
-                    if (lastSaved == 0) {
-                      return const Text('Not saved yet');
-                    }
-                    // calculate timestamp
-                    var time =
-                        DateTime.now().millisecondsSinceEpoch - lastSaved;
-                    var seconds = (time / 1000).floor();
-                    var minutes = (seconds / 60).floor();
-                    return Text('Last saved: $minutes minutes ago');
-                  }),
+              if (currentPage == Pages.editor)
+                ValueListenableBuilder(
+                    valueListenable: updater,
+                    builder: (_, __, ___) {
+                      if (lastSaved == 0) {
+                        return const Text('Not saved yet');
+                      }
+                      // calculate timestamp
+                      var time =
+                          DateTime.now().millisecondsSinceEpoch - lastSaved;
+                      var seconds = (time / 1000).floor();
+                      var minutes = (seconds / 60).floor();
+                      return Text('Last saved: $minutes minutes ago');
+                    }),
             ],
           ),
         ),
@@ -274,28 +293,30 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: TextField(
-                  decoration: const InputDecoration(
-                    hintText: 'WxH',
+              if (currentPage == Pages.editor)
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'WxH',
+                    ),
+                    keyboardType: TextInputType.number,
+                    // only allow numbers
+                    inputFormatters: [
+                      LengthLimitingTextInputFormatter(3),
+                      FilteringTextInputFormatter.digitsOnly
+                    ],
+                    enabled: sprites.isEmpty,
+                    textAlign: TextAlign.center,
+                    controller: wxhController,
+                    onSubmitted: (String value) {},
                   ),
-                  keyboardType: TextInputType.number,
-                  // only allow numbers
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(3),
-                    FilteringTextInputFormatter.digitsOnly
-                  ],
-                  enabled: sprites.isEmpty,
-                  textAlign: TextAlign.center,
-                  controller: wxhController,
-                  onSubmitted: (String value) {},
                 ),
-              ),
-              IconButton(
-                  icon: const Icon(Icons.save),
-                  onPressed: isEnabled() ? () => saveFile(false) : null),
+              if (currentPage == Pages.editor)
+                IconButton(
+                    icon: const Icon(Icons.save),
+                    onPressed: isEnabled() ? () => saveFile(false) : null),
               IconButton(
                 icon: appTheme.value == 0
                     ? const Icon(Icons.dark_mode)
@@ -306,16 +327,17 @@ class _MyHomePageState extends State<MyHomePage> {
                   });
                 },
               ),
-              IconButton(
-                icon: picturesVisible
-                    ? const Icon(Icons.layers)
-                    : const Icon(Icons.layers_clear),
-                onPressed: () {
-                  setState(() {
-                    picturesVisible = !picturesVisible;
-                  });
-                },
-              ),
+              if (currentPage == Pages.editor)
+                IconButton(
+                  icon: picturesVisible
+                      ? const Icon(Icons.layers)
+                      : const Icon(Icons.layers_clear),
+                  onPressed: () {
+                    setState(() {
+                      picturesVisible = !picturesVisible;
+                    });
+                  },
+                ),
             ],
           ),
         ),
@@ -324,6 +346,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   redo() {
+    if (currentPage != Pages.editor) return;
     // redo by using spriteRedo[0]
     setState(() {
       spriteBefore.value.add(sprites[imageSelected.value]);
@@ -334,6 +357,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   undo() {
+    if (currentPage != Pages.editor) return;
     // undo by using spriteBefore[0]
     setState(() {
       spriteRedo.value.add(sprites[imageSelected.value]);
@@ -341,36 +365,6 @@ class _MyHomePageState extends State<MyHomePage> {
       spriteBefore.value.removeAt(0);
       updater.value++;
     });
-  }
-
-  void saveFile(bool overidePath) async {
-    // save as dialog
-    if (sprites.isEmpty) {
-      return;
-    }
-    if (imageSelected.value < 0) {
-      imageSelected.value = 0;
-    }
-    if (!overidePath && sprites[imageSelected.value].path != '') {
-      List<int> bytes = sprites[imageSelected.value].saveAsPng();
-      await File(sprites[imageSelected.value].path).writeAsBytes(bytes);
-      lastSaved = DateTime.now().millisecondsSinceEpoch;
-      updater.value++;
-      return;
-    }
-    String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save avatar Frame',
-        allowedExtensions: ['png'],
-        fileName: '${sprites[0].name}.png');
-    if (outputFile == null) {
-      return;
-    } else {
-      sprites[imageSelected.value].path = outputFile;
-      List<int> bytes = sprites[imageSelected.value].saveAsPng();
-      await File(outputFile).writeAsBytes(bytes);
-    }
-    lastSaved = DateTime.now().millisecondsSinceEpoch;
-    updater.value++;
   }
 
   var dragging = false;
@@ -382,8 +376,12 @@ class _MyHomePageState extends State<MyHomePage> {
       }
       var bytes = await file.readAsBytes();
       var pixels = painter.loadFromPng(bytes);
-      var image = painter.Image(file.name.replaceAll('.png', ''),
-          pixels[0].length, pixels.length, pixels);
+      var image = painter.Image(
+          file.name.replaceAll('.png', ''),
+          pixels[0].length,
+          pixels.length,
+          pixels,
+          painter.FrameTypes.expression);
       setState(() {
         sprites.add(image);
       });
@@ -399,6 +397,10 @@ class _MyHomePageState extends State<MyHomePage> {
         final size = renderBox?.size;
         return size!;
       });
+    }
+
+    if (imageSelected.value < 0) {
+      imageSelected.value = 0;
     }
 
     return DropTarget(
@@ -450,16 +452,16 @@ class _MyHomePageState extends State<MyHomePage> {
                                 ? const Icon(Icons.radio_button_checked)
                                 : const Icon(Icons.radio_button_off),
                             trailing: PopupMenuButton(
-                              itemBuilder: (context) => const [
-                                PopupMenuItem(
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
                                   value: 0,
                                   child: Text('Edit'),
                                 ),
-                                PopupMenuItem(
+                                if (sprites[i].frameType == painter.FrameTypes.expression) const PopupMenuItem(
                                   value: 1,
                                   child: Text('Copy'),
                                 ),
-                                PopupMenuItem(
+                                const PopupMenuItem(
                                   value: 2,
                                   child: Text('Delete'),
                                 ),
@@ -475,7 +477,20 @@ class _MyHomePageState extends State<MyHomePage> {
                                     break;
                                   case 1:
                                     setState(() {
-                                      sprites.add(sprites[i]);
+                                      var frameType = sprites[i].frameType;
+                                      if (frameType !=
+                                          painter.FrameTypes.expression) {
+                                        frameType =
+                                            painter.FrameTypes.expression;
+                                      }
+                                      var image = painter.Image(
+                                          sprites[i].name,
+                                          sprites[i].width,
+                                          sprites[i].height,
+                                          sprites[i].pixels,
+                                          sprites[i].frameType);
+                                      image.name += ' copy';
+                                      sprites.add(image);
                                     });
                                     break;
                                   case 2:
@@ -494,46 +509,13 @@ class _MyHomePageState extends State<MyHomePage> {
                                 }
                               },
                             ),
-                            /*Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () {
-                                        setState(() {
-                                          // change name
-                                          nameController.text = sprites[i].name;
-                                          editNameDialog(context, i);
-                                        });
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.copy),
-                                      onPressed: () {
-                                        setState(() {
-                                          sprites.add(sprites[i]);
-                                        });
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () {
-                                        setState(() {
-                                          sprites.removeAt(i);
-                                          if (imageSelected.value >=
-                                              sprites.length) {
-                                            imageSelected.value =
-                                                sprites.length - 1;
-                                          }
-                                          if (sprites.isEmpty) {
-                                            nameController.text = '';
-                                          }
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),*/
-                            title: Text(sprites[i].name),
+                            title: Text(sprites[i].frameType ==
+                                    painter.FrameTypes.expression
+                                ? sprites[i].name
+                                : sprites[i].frameType ==
+                                        painter.FrameTypes.talking
+                                    ? 'Talking frame'
+                                    : 'Non-talking frame'),
                             onTap: () {
                               imageSelected.value = i;
                             },
@@ -573,55 +555,153 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void editNameDialog(BuildContext context, int i) {
+    painter.FrameTypes? frameType = sprites[i].frameType;
+
+    bool expressionEnabled =
+        sprites[i].frameType == painter.FrameTypes.expression;
+
     showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
             title: const Text('Enter Sprite Name'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                    "Every Avatar needs a 'talking' and 'nontalking' sprite.\nExpression sprites are optional and can be called anything."),
-                Padding(
-                    padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 0.0),
-                    child: Autocomplete(
-                      fieldViewBuilder: (BuildContext context,
-                          TextEditingController textEditingController,
-                          FocusNode focusNode,
-                          VoidCallback onFieldSubmitted) {
-                        return TextField(
-                          decoration: const InputDecoration(
-                            label: Text('Sprite Name'),
-                            border: OutlineInputBorder(),
-                            hintText: 'Enter Frame Name',
-                          ),
-                          textAlign: TextAlign.center,
-                          controller: nameController,
-                          focusNode: focusNode,
-                          onSubmitted: (String value) {
-                            onFieldSubmitted();
-
-                            // add sprite
+            content: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                      "Every Avatar needs a 'talking' and 'nontalking' sprite.\nExpression sprites are optional and can be called anything."),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        enabled: !expressionEnabled,
+                        title: const Text("Talking Frame"),
+                        leading: Radio<painter.FrameTypes>(
+                          value: painter.FrameTypes.talking,
+                          groupValue: frameType,
+                          onChanged: (painter.FrameTypes? value) {
+                            if (expressionEnabled) {
+                              showSnackbar(context,
+                                  'You cannot change an optional Expression to a primary sprite!');
+                              return;
+                            }
                             setState(() {
-                              sprites[i].name = nameController.text;
+                              frameType = value;
                             });
-
-                            Navigator.pop(context);
                           },
-                        );
-                      },
-                      optionsBuilder: (TextEditingValue textEditingValue) {
-                        if (textEditingValue.text == '') {
-                          return const Iterable<String>.empty();
-                        }
-                        return ['talking', 'nontalking', 'Expression_'];
-                      },
-                      onSelected: (String selection) {
-                        debugPrint('You just selected $selection');
-                      },
-                    )),
-              ],
+                        ),
+                      ),
+                      ListTile(
+                        enabled: !expressionEnabled,
+                        title: const Text("Non-Talking Frame"),
+                        leading: Radio<painter.FrameTypes>(
+                          value: painter.FrameTypes.nontalking,
+                          groupValue: frameType,
+                          onChanged: (painter.FrameTypes? value) {
+                            if (expressionEnabled) {
+                              showSnackbar(context,
+                                  'You cannot change an optional Expression to a primary sprite!');
+                              return;
+                            }
+                            setState(() {
+                              frameType = value;
+                            });
+                          },
+                        ),
+                      ),
+                      ListTile(
+                        enabled: expressionEnabled,
+                        title: const Text("Expression Frame"),
+                        leading: Radio<painter.FrameTypes>(
+                          value: painter.FrameTypes.expression,
+                          groupValue: frameType,
+                          onChanged: (painter.FrameTypes? value) {
+                            if (!expressionEnabled) {
+                              showSnackbar(context,
+                                  'You cannot change an primary sprite to an optional Expression!');
+                              return;
+                            }
+                            setState(() {
+                              frameType = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (frameType == painter.FrameTypes.expression)
+                    Padding(
+                        padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 0.0),
+                        child: Autocomplete(
+                          fieldViewBuilder: (BuildContext context,
+                              TextEditingController textEditingController,
+                              FocusNode focusNode,
+                              VoidCallback onFieldSubmitted) {
+                            return TextField(
+                              decoration: const InputDecoration(
+                                label: Text('Sprite Name'),
+                                border: OutlineInputBorder(),
+                                hintText: 'Enter Frame Type',
+                              ),
+                              textAlign: TextAlign.center,
+                              controller: nameController,
+                              focusNode: focusNode,
+                              onSubmitted: (String value) {
+                                onFieldSubmitted();
+
+                                if (value == '' &&
+                                    frameType ==
+                                        painter.FrameTypes.expression) {
+                                  // show error
+                                  showSnackbar(context,
+                                      'Sprite name cannot be empty. Please enter a name.');
+                                  return;
+                                }
+
+                                // check if name is unique
+                                for (var i = 0; i < sprites.length; i++) {
+                                  if (sprites[i].name == value &&
+                                      sprites[i].frameType ==
+                                          painter.FrameTypes.expression) {
+                                    // name is not unique
+                                    // show error
+                                    showSnackbar(context,
+                                        'Sprite name must be unique. Please enter a different name.');
+                                    return;
+                                  }
+                                }
+
+                                // add sprite
+                                setState(() {
+                                  if (frameType ==
+                                      painter.FrameTypes.expression) {
+                                    sprites[i].name = nameController.text;
+                                  } else {
+                                    sprites[i].name = '';
+
+                                    sprites[i].frameType = frameType!;
+                                  }
+                                });
+
+                                nameController.text = '';
+
+                                Navigator.pop(context);
+                              },
+                            );
+                          },
+                          optionsBuilder: (TextEditingValue textEditingValue) {
+                            if (textEditingValue.text == '') {
+                              return const Iterable<String>.empty();
+                            }
+                            return ['talking', 'nontalking', 'Expression_'];
+                          },
+                          onSelected: (String selection) {
+                            debugPrint('You just selected $selection');
+                          },
+                        )),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -632,82 +712,194 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               TextButton(
                 onPressed: () {
+                  if (nameController.text == '' &&
+                      frameType == painter.FrameTypes.expression) {
+                    // show error
+                    showSnackbar(context,
+                        'Sprite name cannot be empty. Please enter a name.');
+                    return;
+                  }
+
+                  // check if name is unique
+                  for (var i = 0; i < sprites.length; i++) {
+                    if (sprites[i].name == nameController.text &&
+                        sprites[i].frameType == painter.FrameTypes.expression) {
+                      // name is not unique
+                      // show error
+                      showSnackbar(context,
+                          'Sprite name must be unique. Please enter a different name.');
+                      return;
+                    }
+                  }
+
                   Navigator.pop(context);
                   // add sprite
                   setState(() {
-                    sprites[i].name = nameController.text;
+                    if (frameType == painter.FrameTypes.expression) {
+                      sprites[i].name = nameController.text;
+                    } else {
+                      sprites[i].name = '';
+
+                      sprites[i].frameType = frameType!;
+                    }
                   });
+                  nameController.text = '';
                 },
                 child: const Text('Change'),
               ),
             ],
           );
-        });
+        }).then((value) => setState(
+          () => {},
+        ));
   }
 
   void showSpriteNameDialog(BuildContext context) {
+    painter.FrameTypes? frameType = painter.FrameTypes.talking;
+
+    bool expressionEnabled = doesPrimarySpriteExist();
+
     showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
             title: const Text('Enter Sprite Name'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                    "Every Avatar needs a 'talking' and 'nontalking' sprite.\nExpression sprites are optional and can be called anything."),
-                Padding(
-                    padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 0.0),
-                    child: Autocomplete(
-                      fieldViewBuilder: (BuildContext context,
-                          TextEditingController textEditingController,
-                          FocusNode focusNode,
-                          VoidCallback onFieldSubmitted) {
-                        return TextField(
-                          decoration: const InputDecoration(
-                            label: Text('Sprite Name'),
-                            border: OutlineInputBorder(),
-                            hintText: 'Enter Frame Name',
-                          ),
-                          textAlign: TextAlign.center,
-                          controller: nameController,
-                          focusNode: focusNode,
-                          onSubmitted: (String value) {
-                            onFieldSubmitted();
-
-                            // add sprite
+            content: StatefulBuilder(
+              builder: (context, StateSetter setState) => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                      "Every Avatar needs a 'talking' and 'nontalking' sprite.\nExpression sprites are optional and can be called anything."),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        title: const Text("Talking Frame"),
+                        leading: Radio<painter.FrameTypes>(
+                          value: painter.FrameTypes.talking,
+                          groupValue: frameType,
+                          onChanged: (painter.FrameTypes? value) {
                             setState(() {
-                              sprites.add(painter.Image(
-                                  nameController.text,
-                                  int.parse(wxhController.text),
-                                  int.parse(wxhController.text), [
-                                for (var i = 0;
-                                    i < int.parse(wxhController.text);
-                                    i++)
-                                  [
-                                    for (var j = 0;
-                                        j < int.parse(wxhController.text);
-                                        j++)
-                                      painter.Pixel(Colors.transparent)
-                                  ]
-                              ]));
+                              frameType = value;
                             });
-
-                            Navigator.pop(context);
                           },
-                        );
-                      },
-                      optionsBuilder: (TextEditingValue textEditingValue) {
-                        if (textEditingValue.text == '') {
-                          return const Iterable<String>.empty();
-                        }
-                        return ['talking', 'nontalking', 'Expression_'];
-                      },
-                      onSelected: (String selection) {
-                        debugPrint('You just selected $selection');
-                      },
-                    )),
-              ],
+                        ),
+                      ),
+                      ListTile(
+                        title: const Text("Non-Talking Frame"),
+                        leading: Radio<painter.FrameTypes>(
+                          value: painter.FrameTypes.nontalking,
+                          groupValue: frameType,
+                          onChanged: (painter.FrameTypes? value) {
+                            setState(() {
+                              frameType = value;
+                            });
+                          },
+                        ),
+                      ),
+                      ListTile(
+                        enabled: expressionEnabled,
+                        title: const Text("Expression Frame"),
+                        leading: Radio<painter.FrameTypes>(
+                          value: painter.FrameTypes.expression,
+                          groupValue: frameType,
+                          onChanged: (painter.FrameTypes? value) {
+                            if (!expressionEnabled) {
+                              showSnackbar(context,
+                                  'You must create a talking and/or non-talking sprite before creating an expression sprite.');
+                              return;
+                            }
+                            setState(() {
+                              frameType = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  // radio buttons for sprite type
+                  if (frameType == painter.FrameTypes.expression)
+                    Padding(
+                        padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 0.0),
+                        child: Autocomplete(
+                          fieldViewBuilder: (BuildContext context,
+                              TextEditingController textEditingController,
+                              FocusNode focusNode,
+                              VoidCallback onFieldSubmitted) {
+                            return TextField(
+                              decoration: const InputDecoration(
+                                label: Text('Sprite Name'),
+                                border: OutlineInputBorder(),
+                                hintText: 'Enter Frame Type',
+                              ),
+                              textAlign: TextAlign.center,
+                              controller: nameController,
+                              focusNode: focusNode,
+                              onSubmitted: (String value) {
+                                onFieldSubmitted();
+
+                                if (value == '' &&
+                                    frameType ==
+                                        painter.FrameTypes.expression) {
+                                  // show error
+                                  showSnackbar(context,
+                                      'Sprite name cannot be empty. Please enter a name.');
+                                  return;
+                                }
+
+                                // check if name is unique
+                                for (var i = 0; i < sprites.length; i++) {
+                                  if (sprites[i].name == value &&
+                                      sprites[i].frameType ==
+                                          painter.FrameTypes.expression) {
+                                    // name is not unique
+                                    // show error
+                                    showSnackbar(context,
+                                        'Sprite name must be unique. Please enter a different name.');
+                                    return;
+                                  }
+                                }
+
+                                // add sprite
+                                setState(() {
+                                  sprites.add(painter.Image(
+                                      nameController.text,
+                                      int.parse(wxhController.text),
+                                      int.parse(wxhController.text),
+                                      [
+                                        for (var i = 0;
+                                            i < int.parse(wxhController.text);
+                                            i++)
+                                          [
+                                            for (var j = 0;
+                                                j <
+                                                    int.parse(
+                                                        wxhController.text);
+                                                j++)
+                                              painter.Pixel(Colors.transparent)
+                                          ]
+                                      ],
+                                      frameType!));
+                                });
+
+                                nameController.text = '';
+
+                                Navigator.pop(context);
+                              },
+                            );
+                          },
+                          optionsBuilder: (TextEditingValue textEditingValue) {
+                            if (textEditingValue.text == '') {
+                              return const Iterable<String>.empty();
+                            }
+                            return ['talking', 'nontalking', 'Expression_'];
+                          },
+                          onSelected: (String selection) {
+                            debugPrint('You just selected $selection');
+                          },
+                        )),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -718,22 +910,48 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               TextButton(
                 onPressed: () {
+                  if (nameController.text == '' &&
+                      frameType == painter.FrameTypes.expression) {
+                    // show error
+                    showSnackbar(context,
+                        'Sprite name cannot be empty. Please enter a name.');
+                    return;
+                  }
+
+                  // check if name is unique
+                  for (var i = 0; i < sprites.length; i++) {
+                    if (sprites[i].name == nameController.text &&
+                        frameType == painter.FrameTypes.expression) {
+                      // name is not unique
+                      // show error
+                      showSnackbar(context,
+                          'Sprite name must be unique. Please enter a different name.');
+                      return;
+                    }
+                  }
+
                   Navigator.pop(context);
                   // add sprite
                   setState(() {
                     sprites.add(painter.Image(
                         nameController.text,
                         int.parse(wxhController.text),
-                        int.parse(wxhController.text), [
-                      for (var i = 0; i < int.parse(wxhController.text); i++)
+                        int.parse(wxhController.text),
                         [
-                          for (var j = 0;
-                              j < int.parse(wxhController.text);
-                              j++)
-                            painter.Pixel(Colors.transparent)
-                        ]
-                    ]));
+                          for (var i = 0;
+                              i < int.parse(wxhController.text);
+                              i++)
+                            [
+                              for (var j = 0;
+                                  j < int.parse(wxhController.text);
+                                  j++)
+                                painter.Pixel(Colors.transparent)
+                            ]
+                        ],
+                        frameType!));
                   });
+
+                  nameController.text = '';
                 },
                 child: const Text('Add'),
               ),
@@ -752,4 +970,4 @@ List<painter.Image> sprites = [];
 
 ValueNotifier<List<painter.Image>> spriteBefore = ValueNotifier([]);
 ValueNotifier<List<painter.Image>> spriteRedo = ValueNotifier([]);
-  ValueNotifier<int> imageSelected = ValueNotifier(0);
+ValueNotifier<int> imageSelected = ValueNotifier(0);
