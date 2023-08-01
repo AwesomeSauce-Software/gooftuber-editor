@@ -1,6 +1,7 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:pixelart/dialogs.dart';
 import 'package:pixelart/painter.dart' as painter;
 import 'package:pixelart/tools/jsonexport.dart';
@@ -450,103 +451,130 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               child: ValueListenableBuilder(
                   valueListenable: imageSelected,
                   builder: (context, spriteSelected, _) {
-                    return Scaffold(
-                      appBar: AppBar(
-                        title: const Text("Frames"),
-                        actions: [
-                          IconButton(
-                            icon: const Icon(Icons.add_rounded),
-                            onPressed: () {
-                              // dialog for sprite name
-                              showSpriteNameDialog(context);
-                            },
-                          ),
-                        ],
-                      ),
-                      body:
-                          ListView(padding: EdgeInsets.zero, children: <Widget>[
-                        for (var i = 0; i < sprites.length; i++)
-                        Container(
-                          color: i == imageSelected.value
-                              ? Theme.of(context).colorScheme.onInverseSurface
-                              : null,
-                          child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ListTile(
-                            leading: i == imageSelected.value
-                                ? const Icon(Icons.radio_button_checked_rounded)
-                                : const Icon(Icons.radio_button_off_rounded),
-                            trailing: PopupMenuButton(
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: 0,
-                                  child: Text('Edit'),
-                                ),
-                                if (sprites[i].frameType ==
-                                    painter.FrameTypes.expression)
-                                  const PopupMenuItem(
-                                    value: 1,
-                                    child: Text('Copy'),
-                                  ),
-                                const PopupMenuItem(
-                                  value: 2,
-                                  child: Text('Delete'),
-                                ),
-                              ],
-                              onSelected: (value) {
-                                switch (value) {
-                                  case 0:
-                                    setState(() {
-                                      // change name
-                                      nameController.text = sprites[i].name;
-                                      editNameDialog(context, i);
-                                    });
-                                    break;
-                                  case 1:
-                                    setState(() {
-                                      var frameType = sprites[i].frameType;
-                                      if (frameType !=
-                                          painter.FrameTypes.expression) {
-                                        frameType =
-                                            painter.FrameTypes.expression;
-                                      }
-                                      var image = copyImage(sprites[i]);
-                                      image.name += ' copy';
-                                      sprites.add(image);
-                                    });
-                                    break;
-                                  case 2:
-                                    setState(() {
-                                      sprites.removeAt(i);
-                                      if (imageSelected.value >=
-                                          sprites.length) {
-                                        imageSelected.value =
-                                            sprites.length - 1;
-                                      }
-                                      if (sprites.isEmpty) {
-                                        nameController.text = '';
-                                      }
-                                    });
-                                    break;
-                                }
-                              },
+                    return DefaultTabController(
+                      length: 2,
+                      child: Scaffold(
+                        bottomNavigationBar: const TabBar(
+                          tabs: [
+                            Tab(
+                              icon: Icon(Icons.layers_rounded),
                             ),
-                            title: Text(sprites[i].frameType ==
-                                    painter.FrameTypes.expression
-                                ? sprites[i].name
-                                : sprites[i].frameType ==
-                                        painter.FrameTypes.talking
-                                    ? 'Talking frame'
-                                    : 'Non-talking frame'),
-                            onTap: () {
-                              imageSelected.value = i;
-                            },
-                          ),
-                            if (previewsVisible) SizedBox(width:128, height:128, child: Image.memory(Uint8List.fromList(sprites[i].saveAsPng()))),
+                            Tab(
+                              icon: Icon(Icons.color_lens_rounded),
+                            ),
                           ],
-                        ),)
-                      ]),
+                        ),
+                        appBar: AppBar(
+                            title: const Text("Frames and Color"),
+                            actions: [
+                              IconButton(
+                                icon: const Icon(Icons.add_rounded),
+                                onPressed: () {
+                                  // dialog for sprite name
+                                  showSpriteNameDialog(context);
+                                },
+                              ),
+                            ],
+                          ),
+                        body:
+                            TabBarView(
+                              children: [
+                                ListView(padding: EdgeInsets.zero, children: <Widget>[
+                          for (var i = 0; i < sprites.length; i++)
+                          InkWell(
+                                onTap: () {
+                                  imageSelected.value = i;
+                                },
+                                child: Container(
+                                  color: i == imageSelected.value
+                                      ? Theme.of(context).colorScheme.onInverseSurface
+                                      : null,
+                                  child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ListTile(
+                                    leading: i == imageSelected.value
+                                        ? const Icon(Icons.radio_button_checked_rounded)
+                                        : const Icon(Icons.radio_button_off_rounded),
+                                    trailing: PopupMenuButton(
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 0,
+                                          child: Text('Edit'),
+                                        ),
+                                        if (sprites[i].frameType ==
+                                            painter.FrameTypes.expression)
+                                          const PopupMenuItem(
+                                            value: 1,
+                                            child: Text('Copy'),
+                                          ),
+                                        const PopupMenuItem(
+                                          value: 2,
+                                          child: Text('Delete'),
+                                        ),
+                                      ],
+                                      onSelected: (value) {
+                                        switch (value) {
+                                          case 0:
+                                            setState(() {
+                                              // change name
+                                              nameController.text = sprites[i].name;
+                                              editNameDialog(context, i);
+                                            });
+                                            break;
+                                          case 1:
+                                            setState(() {
+                                              var frameType = sprites[i].frameType;
+                                              if (frameType !=
+                                                  painter.FrameTypes.expression) {
+                                                frameType =
+                                                    painter.FrameTypes.expression;
+                                              }
+                                              var image = copyImage(sprites[i]);
+                                              image.name += ' copy';
+                                              sprites.add(image);
+                                            });
+                                            break;
+                                          case 2:
+                                            setState(() {
+                                              sprites.removeAt(i);
+                                              if (imageSelected.value >=
+                                                  sprites.length) {
+                                                imageSelected.value =
+                                                    sprites.length - 1;
+                                              }
+                                              if (sprites.isEmpty) {
+                                                nameController.text = '';
+                                              }
+                                            });
+                                            break;
+                                        }
+                                      },
+                                    ),
+                                    title: Text(sprites[i].frameType ==
+                                            painter.FrameTypes.expression
+                                        ? sprites[i].name
+                                        : sprites[i].frameType ==
+                                                painter.FrameTypes.talking
+                                            ? 'Talking frame'
+                                            : 'Non-talking frame'),
+                                  ),
+                                    if (previewsVisible && !isImageEmpty(sprites[i])) SizedBox(width:128, height:128, child: Image.memory(Uint8List.fromList(sprites[i].saveAsPng()), gaplessPlayback: true)),
+                                  ],
+                                ),),
+                          )
+                        ]),
+                        Center(child: ColorPicker(
+                          portraitOnly: true,
+                          pickerColor: painter.colorSet,
+                          onColorChanged: (color) {
+                            painter.colorSet = color;
+                          },
+                          pickerAreaHeightPercent: 1.0,
+                        ),),
+                              ],
+                            ),
+                      ),
                     );
                   })),
           if (dragging)

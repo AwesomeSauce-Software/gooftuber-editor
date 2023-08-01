@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' as m;
 import 'package:pixelart/main.dart';
 
 import '../painter.dart';
@@ -28,4 +29,13 @@ Image copyImage(Image image) {
     }
   }
   return Image(image.name, image.width, image.height, pixels, image.frameType);
+}
+
+bool isImageEmpty(Image image) {
+  for (int y = 0; y < image.height; y++) {
+    for (int x = 0; x < image.width; x++) {
+      if (!image.pixels[y][x].empty && image.pixels[y][x].color != m.Colors.transparent) return false;
+    }
+  }
+  return true;
 }

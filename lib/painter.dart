@@ -83,6 +83,8 @@ class Painter extends StatefulWidget {
 
 enum Tool { brush, eraser, fill, pick }
 
+Color colorSet = Colors.black;
+
 class _PainterState extends State<Painter> {
   // variables
   Tool tool = Tool.brush;
@@ -92,7 +94,6 @@ class _PainterState extends State<Painter> {
   double _x = 0;
   double _y = 0;
   bool showGrid = false;
-  Color _color = Colors.black;
   Color _backgroundColor = Colors.transparent;
   List<List<Pixel>> _pixels = [];
   var lastDrawn = [];
@@ -101,7 +102,7 @@ class _PainterState extends State<Painter> {
   Image editPixel(int selected, int col, int row) {
     switch (tool) {
       case Tool.brush:
-        _pixels[row][col].color = _color;
+        _pixels[row][col].color = colorSet;
         sprites[selected].pixels = _pixels;
         lastDrawn = [row, col];
         break;
@@ -129,7 +130,7 @@ class _PainterState extends State<Painter> {
             if (visited[r][c]) continue;
             visited[r][c] = true;
             if (_pixels[r][c].color == _pixels[row][col].color) {
-              newPixels[r][c].color = _color;
+              newPixels[r][c].color = colorSet;
               newPixels[r][c].empty = false;
               queue.add([r + 1, c]);
               queue.add([r - 1, c]);
@@ -154,7 +155,7 @@ class _PainterState extends State<Painter> {
         break;
       case Tool.pick:
         setState(() {
-          _color = _pixels[row][col].color;
+          colorSet = _pixels[row][col].color;
         });
         break;
     }
@@ -313,10 +314,10 @@ class _PainterState extends State<Painter> {
                                       pickerAreaHeightPercent: 0.5,
                                       labelTypes: const [ColorLabelType.rgb],
                                       enableAlpha: true,
-                                      pickerColor: _color,
+                                      pickerColor: colorSet,
                                       onColorChanged: (color) {
                                         setState(() {
-                                          _color = color;
+                                          colorSet = color;
                                         });
                                       },
                                     ),
@@ -385,6 +386,7 @@ class _PainterState extends State<Painter> {
                         });
                       },
                       onPanUpdate: (details) {
+                        if (tool == Tool.fill) return;
                         setState(() {
                           sprites[selected] =
                               doPaint(details.localPosition, selected);
@@ -432,7 +434,7 @@ class _PainterState extends State<Painter> {
   }
 
   Image doPick(int row, int col, selected) {
-    _color = sprites[selected].pixels[row][col].color;
+    colorSet = sprites[selected].pixels[row][col].color;
     return sprites[selected];
   }
 

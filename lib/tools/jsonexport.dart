@@ -41,14 +41,14 @@ List<painter.Image> importJson(context, String json) {
     Map<String, dynamic> data = jsonDecode(json);
     for (Map<String, dynamic> avatar in data["avatars"]) {
       var pixels = painter.loadFromPng(base64Decode(avatar["base64"]!));
-      if (avatar["filename"]! == 'talking' ||
-          avatar["filename"]! == 'nontalking') {
+      if (avatar["filename"]!.replaceAll('.png', '').toLowerCase() == 'talking' ||
+          avatar["filename"]!.replaceAll('.png', '').toLowerCase() == 'nontalking') {
         images.add(painter.Image(
             '',
             pixels[0].length,
             pixels.length,
             pixels,
-            avatar["filename"]! == 'talking'
+            avatar["filename"]!.replaceAll('.png', '').toLowerCase() == 'talking'
                 ? painter.FrameTypes.talking
                 : painter.FrameTypes.nontalking));
         continue;
