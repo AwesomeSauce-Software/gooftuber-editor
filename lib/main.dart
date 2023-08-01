@@ -67,8 +67,7 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  // refresh updater every sec
+class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
@@ -128,6 +127,9 @@ class _MyHomePageState extends State<MyHomePage> {
       var toUpdate = updater.value++;
       if (toUpdate > 100) {
         toUpdate = 0;
+      }
+      if (undoRedo.value > 100) {
+        undoRedo.value = 0;
       }
       updater.value = toUpdate;
       refresh();
@@ -220,7 +222,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       // build pixel art editor
                       return const painter.Painter();
                     })),
-          if (currentPage == Pages.view) Expanded(child: const SpritePreview()),
+          if (currentPage == Pages.view) const Expanded(child: SpritePreview()),
           if (picturesVisible && currentPage == Pages.editor)
             const VerticalDivider(width: 1),
           if (picturesVisible && currentPage == Pages.editor) drawer(context)
@@ -236,6 +238,7 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Row(
             children: [
               IconButton(
+                tooltip: 'Toggle Navigation Rail',
                 icon: navRailVisible
                     ? const Icon(Icons.menu)
                     : const Icon(Icons.menu_open),
@@ -250,6 +253,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     valueListenable: spriteBefore,
                     builder: (_, sprite, ___) {
                       return IconButton(
+                        tooltip: 'Undo',
                         icon: const Icon(Icons.undo),
                         onPressed: (sprite.isNotEmpty) ? undo : null,
                       );
@@ -259,6 +263,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     valueListenable: spriteRedo,
                     builder: (_, sprite, ___) {
                       return IconButton(
+                        tooltip: 'Redo',
                         icon: const Icon(Icons.redo),
                         onPressed: (sprite.isNotEmpty) ? redo : null,
                       );
@@ -313,9 +318,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               if (currentPage == Pages.editor)
                 IconButton(
+                    tooltip: 'Save image as PNG',
                     icon: const Icon(Icons.save),
                     onPressed: isEnabled() ? () => saveFile(false) : null),
               IconButton(
+                tooltip: 'Toggle Theme',
                 icon: appTheme.value == 0
                     ? const Icon(Icons.dark_mode)
                     : const Icon(Icons.light_mode),
@@ -327,6 +334,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               if (currentPage == Pages.editor)
                 IconButton(
+                  tooltip: 'Toggle Frames',
                   icon: picturesVisible
                       ? const Icon(Icons.layers)
                       : const Icon(Icons.layers_clear),
@@ -347,10 +355,10 @@ class _MyHomePageState extends State<MyHomePage> {
     if (currentPage != Pages.editor) return;
     // redo by using spriteRedo[0]
     setState(() {
-      spriteBefore.value.add(sprites[imageSelected.value]);
+      spriteBefore.value.add(copyImage(sprites[imageSelected.value]));
       sprites[imageSelected.value] = spriteRedo.value[0];
       spriteRedo.value.removeAt(0);
-      updater.value++;
+      undoRedo.value++;
     });
   }
 
@@ -358,10 +366,10 @@ class _MyHomePageState extends State<MyHomePage> {
     if (currentPage != Pages.editor) return;
     // undo by using spriteBefore[0]
     setState(() {
-      spriteRedo.value.add(sprites[imageSelected.value]);
+      spriteRedo.value.add(copyImage(sprites[imageSelected.value]));
       sprites[imageSelected.value] = spriteBefore.value[0];
       spriteBefore.value.removeAt(0);
-      updater.value++;
+      undoRedo.value++;
     });
   }
 
@@ -455,10 +463,12 @@ class _MyHomePageState extends State<MyHomePage> {
                                   value: 0,
                                   child: Text('Edit'),
                                 ),
-                                if (sprites[i].frameType == painter.FrameTypes.expression) const PopupMenuItem(
-                                  value: 1,
-                                  child: Text('Copy'),
-                                ),
+                                if (sprites[i].frameType ==
+                                    painter.FrameTypes.expression)
+                                  const PopupMenuItem(
+                                    value: 1,
+                                    child: Text('Copy'),
+                                  ),
                                 const PopupMenuItem(
                                   value: 2,
                                   child: Text('Delete'),
@@ -959,6 +969,7 @@ var appTheme = ValueNotifier(0);
 // timestamp of when the last save was made
 var lastSaved = 0;
 var updater = ValueNotifier(0);
+var undoRedo = ValueNotifier(0);
 List<painter.Image> sprites = [];
 
 ValueNotifier<List<painter.Image>> spriteBefore = ValueNotifier([]);
