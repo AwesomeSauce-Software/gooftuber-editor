@@ -10,8 +10,6 @@ import 'package:pixelart/view_sprites.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 
-// TODO: Fix copying
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -483,12 +481,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         frameType =
                                             painter.FrameTypes.expression;
                                       }
-                                      var image = painter.Image(
-                                          sprites[i].name,
-                                          sprites[i].width,
-                                          sprites[i].height,
-                                          sprites[i].pixels,
-                                          sprites[i].frameType);
+                                      var image = copyImage(sprites[i]);
                                       image.name += ' copy';
                                       sprites.add(image);
                                     });
