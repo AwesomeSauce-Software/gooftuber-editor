@@ -145,6 +145,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 
   var navRailVisible = true;
   var picturesVisible = true;
+  var previewsVisible = true;
 
   var currentPage = Pages.editor;
 
@@ -165,19 +166,19 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               // color selected chip
               destinations: const <NavigationRailDestination>[
                 NavigationRailDestination(
-                  icon: Icon(Icons.edit),
+                  icon: Icon(Icons.edit_rounded),
                   label: Text('Editor'),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.photo_album),
+                  icon: Icon(Icons.photo_album_rounded),
                   label: Text('View'),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.folder),
+                  icon: Icon(Icons.folder_rounded),
                   label: Text('Import'),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.save_alt),
+                  icon: Icon(Icons.save_alt_rounded),
                   label: Text('Export'),
                 ),
               ],
@@ -240,8 +241,8 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               IconButton(
                 tooltip: 'Toggle Navigation Rail',
                 icon: navRailVisible
-                    ? const Icon(Icons.menu)
-                    : const Icon(Icons.menu_open),
+                    ? const Icon(Icons.menu_rounded)
+                    : const Icon(Icons.menu_open_rounded),
                 onPressed: () {
                   setState(() {
                     navRailVisible = !navRailVisible;
@@ -254,7 +255,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                     builder: (_, sprite, ___) {
                       return IconButton(
                         tooltip: 'Undo',
-                        icon: const Icon(Icons.undo),
+                        icon: const Icon(Icons.undo_rounded),
                         onPressed: (sprite.isNotEmpty) ? undo : null,
                       );
                     }),
@@ -264,7 +265,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                     builder: (_, sprite, ___) {
                       return IconButton(
                         tooltip: 'Redo',
-                        icon: const Icon(Icons.redo),
+                        icon: const Icon(Icons.redo_rounded),
                         onPressed: (sprite.isNotEmpty) ? redo : null,
                       );
                     }),
@@ -319,13 +320,13 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               if (currentPage == Pages.editor)
                 IconButton(
                     tooltip: 'Save image as PNG',
-                    icon: const Icon(Icons.save),
+                    icon: const Icon(Icons.save_rounded),
                     onPressed: isEnabled() ? () => saveFile(false) : null),
               IconButton(
                 tooltip: 'Toggle Theme',
                 icon: appTheme.value == 0
-                    ? const Icon(Icons.dark_mode)
-                    : const Icon(Icons.light_mode),
+                    ? const Icon(Icons.dark_mode_rounded)
+                    : const Icon(Icons.light_mode_rounded),
                 onPressed: () {
                   setState(() {
                     appTheme.value = appTheme.value == 0 ? 1 : 0;
@@ -334,10 +335,22 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               ),
               if (currentPage == Pages.editor)
                 IconButton(
+                  tooltip: 'Toggle Previews',
+                  icon: previewsVisible
+                      ? const Icon(Icons.visibility_rounded)
+                      : const Icon(Icons.visibility_off_rounded),
+                  onPressed: () {
+                    setState(() {
+                      previewsVisible = !previewsVisible;
+                    });
+                  },
+                ),
+              if (currentPage == Pages.editor)
+                IconButton(
                   tooltip: 'Toggle Frames',
                   icon: picturesVisible
-                      ? const Icon(Icons.layers)
-                      : const Icon(Icons.layers_clear),
+                      ? const Icon(Icons.layers_rounded)
+                      : const Icon(Icons.layers_clear_rounded),
                   onPressed: () {
                     setState(() {
                       picturesVisible = !picturesVisible;
@@ -442,7 +455,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                         title: const Text("Frames"),
                         actions: [
                           IconButton(
-                            icon: const Icon(Icons.add),
+                            icon: const Icon(Icons.add_rounded),
                             onPressed: () {
                               // dialog for sprite name
                               showSpriteNameDialog(context);
@@ -453,10 +466,17 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                       body:
                           ListView(padding: EdgeInsets.zero, children: <Widget>[
                         for (var i = 0; i < sprites.length; i++)
-                          ListTile(
+                        Container(
+                          color: i == imageSelected.value
+                              ? Theme.of(context).colorScheme.onInverseSurface
+                              : null,
+                          child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
                             leading: i == imageSelected.value
-                                ? const Icon(Icons.radio_button_checked)
-                                : const Icon(Icons.radio_button_off),
+                                ? const Icon(Icons.radio_button_checked_rounded)
+                                : const Icon(Icons.radio_button_off_rounded),
                             trailing: PopupMenuButton(
                               itemBuilder: (context) => [
                                 const PopupMenuItem(
@@ -523,6 +543,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                               imageSelected.value = i;
                             },
                           ),
+                            if (previewsVisible) SizedBox(width:128, height:128, child: Image.memory(Uint8List.fromList(sprites[i].saveAsPng()))),
+                          ],
+                        ),)
                       ]),
                     );
                   })),
@@ -541,7 +564,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.file_upload),
+                          Icon(Icons.file_upload_rounded),
                           Text('Release to import')
                         ],
                       ),
