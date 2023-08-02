@@ -3,9 +3,9 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:pixelart/painter.dart' as painter;
-import 'package:pixelart/tools/platformtools.dart';
-import 'package:pixelart/tools/webtools.dart';
+import 'package:gooftuber_editor/painter.dart' as painter;
+import 'package:gooftuber_editor/tools/platformtools.dart';
+import 'package:gooftuber_editor/tools/webtools.dart';
 
 import '../dialogs.dart';
 import '../main.dart';

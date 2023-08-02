@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart' as m;
-import 'package:pixelart/main.dart';
+import 'package:gooftuber_editor/main.dart';
 
 import '../painter.dart';
 

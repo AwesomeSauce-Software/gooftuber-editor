@@ -2,12 +2,12 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:pixelart/dialogs.dart';
-import 'package:pixelart/painter.dart' as painter;
-import 'package:pixelart/tools/jsonexport.dart';
-import 'package:pixelart/tools/platformtools.dart';
-import 'package:pixelart/tools/sprite_tools.dart';
-import 'package:pixelart/view_sprites.dart';
+import 'package:gooftuber_editor/dialogs.dart';
+import 'package:gooftuber_editor/painter.dart' as painter;
+import 'package:gooftuber_editor/tools/jsonexport.dart';
+import 'package:gooftuber_editor/tools/platformtools.dart';
+import 'package:gooftuber_editor/tools/sprite_tools.dart';
+import 'package:gooftuber_editor/view_sprites.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 
@@ -200,7 +200,7 @@ class _MyHomePageState extends State<MyHomePage>
                     currentPage = Pages.view;
                   });
                 } else if (index == 2) {
-                  var newSprites = await importFile(context);
+                  List<painter.Image> newSprites = await importFile(context);
                   setState(() {
                     sprites = newSprites;
                   });
