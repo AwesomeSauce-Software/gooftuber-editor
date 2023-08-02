@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:gooftuber_editor/main.dart';
+import 'package:gooftuber_editor/tools/apitools.dart';
+import 'package:gooftuber_editor/views/dialogs.dart';
 import 'package:gooftuber_editor/views/editor/dialogs.dart';
 import 'package:gooftuber_editor/views/editor/utils.dart';
 import 'package:gooftuber_editor/views/painter.dart' as painter;
@@ -99,51 +101,75 @@ class _EditorPageState extends State<Editor>
           child: Row(
         children: [
           if (navRailVisible)
-            NavigationRail(
-              groupAlignment: 0,
-              labelType: NavigationRailLabelType.all,
-              // color selected chip
-              destinations: const <NavigationRailDestination>[
-                NavigationRailDestination(
-                  icon: Icon(Icons.edit_rounded),
-                  label: Text('Editor'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.photo_album_rounded),
-                  label: Text('View'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.folder_rounded),
-                  label: Text('Import'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.save_alt_rounded),
-                  label: Text('Export'),
-                ),
-              ],
-              selectedIndex: currentPage.index,
-              useIndicator: true,
-              onDestinationSelected: (int index) async {
-                if (index == 0) {
-                  // editor
-                  setState(() {
-                    currentPage = Pages.editor;
-                  });
-                } else if (index == 1) {
-                  // view
-                  setState(() {
-                    currentPage = Pages.view;
-                  });
-                } else if (index == 2) {
-                  List<painter.Image> newSprites = await importFile(context);
-                  setState(() {
-                    sprites = newSprites;
-                  });
-                } else if (index == 3) {
-                  String json = exportJson(sprites);
-                  exportFile(context, json);
-                }
-              },
+            FutureBuilder(
+              future: isApiUp(),
+              builder: (context, apiUp) {
+                return NavigationRail(
+                  groupAlignment: 0,
+                  labelType: NavigationRailLabelType.all,
+                  // color selected chip
+                  destinations: <NavigationRailDestination>[
+                    const NavigationRailDestination(
+                      icon: Icon(Icons.edit_rounded),
+                      label: Text('Editor'),
+                    ),
+                    const NavigationRailDestination(
+                      icon: Icon(Icons.photo_album_rounded),
+                      label: Text('View'),
+                    ),
+                    const NavigationRailDestination(
+                      icon: Icon(Icons.folder_rounded),
+                      label: Text('Import'),
+                    ),
+                    const NavigationRailDestination(
+                      icon: Icon(Icons.save_alt_rounded),
+                      label: Text('Export'),
+                    ),
+                    if (apiUp.data ?? false) const NavigationRailDestination(
+                      icon: Icon(Icons.cloud_upload_rounded),
+                      label: Text('Sync'),
+                    ),
+                  ],
+                  selectedIndex: currentPage.index,
+                  useIndicator: true,
+                  onDestinationSelected: (int index) async {
+                    if (index == 0) {
+                      // editor
+                      setState(() {
+                        currentPage = Pages.editor;
+                      });
+                    } else if (index == 1) {
+                      // view
+                      setState(() {
+                        currentPage = Pages.view;
+                      });
+                    } else if (index == 2) {
+                      List<painter.Image> newSprites = await importFile(context);
+                      setState(() {
+                        sprites = newSprites;
+                      });
+                    } else if (index == 3) {
+                      String json = exportJson(sprites);
+                      exportFile(context, json);
+                    } else if (index == 4) {
+                      showCodeDialog(context).then((value) async {
+                        if (value != null) {
+                          var result = await submitAvatar(exportJson(sprites), value);
+                          if (!result) {
+                            if (context.mounted) {
+                              showSnackbar(context, 'Upload failed');
+                            }
+                          } else {
+                            if (context.mounted) {
+                              showSnackbar(context, 'Upload successful!');
+                            }
+                          }
+                        }
+                      });
+                    }
+                  },
+                );
+              }
             ),
           if (navRailVisible) const VerticalDivider(width: 1),
           if (currentPage == Pages.editor)

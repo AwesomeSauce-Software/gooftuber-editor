@@ -28,9 +28,9 @@ String exportJson(List<painter.Image> images) {
   for (painter.Image image in images) {
     var name = image.name;
     if (image.frameType == painter.FrameTypes.talking) {
-      name = 'talking';
+      name = 'talking.png';
     } else if (image.frameType == painter.FrameTypes.nontalking) {
-      name = 'nontalking';
+      name = 'nontalking.png';
     }
     avatars.add(
         {"filename": name, "base64": base64Encode(image.saveAsPng())});
