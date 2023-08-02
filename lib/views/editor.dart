@@ -296,12 +296,17 @@ class _EditorPageState extends State<Editor>
                     onPressed: isEnabled() ? () => saveProject() : null),
               IconButton(
                 tooltip: 'Toggle Theme',
-                icon: appTheme.value == 0
-                    ? const Icon(Icons.dark_mode_rounded)
-                    : const Icon(Icons.light_mode_rounded),
+                icon: appTheme.value != 2
+                    ? appTheme.value == 0? const Icon(Icons.dark_mode_rounded)
+                    : const Icon(Icons.light_mode_rounded)
+                    : const Icon(Icons.auto_awesome_rounded),
                 onPressed: () {
                   setState(() {
-                    appTheme.value = appTheme.value == 0 ? 1 : 0;
+                    int value = appTheme.value + 1;
+                    if (value > 2) {
+                      value = 0;
+                    }
+                    appTheme.value = value;
                   });
                 },
               ),

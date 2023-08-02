@@ -47,7 +47,7 @@ class Gooftuber extends StatelessWidget {
                 colorScheme: darkDynamic,
                 useMaterial3: true,
               ),
-              themeMode: mode == 0 ? ThemeMode.light : ThemeMode.dark,
+              themeMode: mode == 0 ? ThemeMode.light : mode == 1 ? ThemeMode.dark : ThemeMode.system,
               debugShowCheckedModeBanner: false,
               home: const Editor(title: 'Gooftuber Avatar Editor'),
             );
@@ -58,7 +58,7 @@ class Gooftuber extends StatelessWidget {
   }
 }
 
-var appTheme = ValueNotifier(0);
+var appTheme = ValueNotifier(2);
 
 // timestamp of when the last save was made
 var lastSaved = 0;
