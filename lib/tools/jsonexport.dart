@@ -3,11 +3,12 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:gooftuber_editor/painter.dart' as painter;
+import 'package:gooftuber_editor/views/painter.dart' as painter;
 import 'package:gooftuber_editor/tools/platformtools.dart';
 import 'package:gooftuber_editor/tools/webtools.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../dialogs.dart';
+import '../views/dialogs.dart';
 import '../main.dart';
 
 /* 
@@ -117,38 +118,51 @@ Future<List<painter.Image>> importFile(context) async {
   }
 }
 
-Future<void> saveFile(bool overidePath) async {
+Future<void> loadProject(context) async {
+final prefs = await SharedPreferences.getInstance();
+  if (prefs.getString("project") != null) {
+    sprites = importJson(context, prefs.getString("project")!);
+    updater.value++;
+  }
+  return ;
+}
+
+Future<void> saveProject() async {
+  final prefs = await SharedPreferences.getInstance();
+  prefs.setString("project", exportJson(sprites));
+  lastSaved = DateTime.now().millisecondsSinceEpoch;
+  return;
+}
+
+Future<void> saveFile(int image) async {
   // save as dialog
   if (sprites.isEmpty) {
     return;
   }
-  if (imageSelected.value < 0) {
-    imageSelected.value = 0;
-  }
 
   if (isPlatformWeb()) {
-    var name = sprites[imageSelected.value].name;
-  if (sprites[imageSelected.value].frameType == painter.FrameTypes.talking) {
+    var name = sprites[image].name;
+  if (sprites[image].frameType == painter.FrameTypes.talking) {
     name = 'talking';
-  } else if (sprites[imageSelected.value].frameType ==
+  } else if (sprites[image].frameType ==
       painter.FrameTypes.nontalking) {
     name = 'nontalking';
   }
-    saveFileOnWeb(Uint8List.fromList(sprites[imageSelected.value].saveAsPng()), '$name.png');
+    saveFileOnWeb(Uint8List.fromList(sprites[image].saveAsPng()), '$name.png');
     return;
   }
 
-  if (!overidePath && sprites[imageSelected.value].path != '') {
-    List<int> bytes = sprites[imageSelected.value].saveAsPng();
-    await File(sprites[imageSelected.value].path).writeAsBytes(bytes);
+  if (sprites[image].path != '') {
+    List<int> bytes = sprites[image].saveAsPng();
+    await File(sprites[image].path).writeAsBytes(bytes);
     lastSaved = DateTime.now().millisecondsSinceEpoch;
     updater.value++;
     return;
   }
-  var name = sprites[imageSelected.value].name;
-  if (sprites[imageSelected.value].frameType == painter.FrameTypes.talking) {
+  var name = sprites[image].name;
+  if (sprites[image].frameType == painter.FrameTypes.talking) {
     name = 'talking';
-  } else if (sprites[imageSelected.value].frameType ==
+  } else if (sprites[image].frameType ==
       painter.FrameTypes.nontalking) {
     name = 'nontalking';
   }
@@ -159,10 +173,9 @@ Future<void> saveFile(bool overidePath) async {
   if (outputFile == null) {
     return;
   } else {
-    sprites[imageSelected.value].path = outputFile;
-    List<int> bytes = sprites[imageSelected.value].saveAsPng();
+    sprites[image].path = outputFile;
+    List<int> bytes = sprites[image].saveAsPng();
     await File(outputFile).writeAsBytes(bytes);
   }
-  lastSaved = DateTime.now().millisecondsSinceEpoch;
   updater.value++;
 }

@@ -85,6 +85,10 @@ enum Tool { brush, eraser, fill, pick }
 
 Color colorSet = Colors.black;
 
+bool isPainting = false;
+int lastPixel = 0;
+bool blockPainting = false;
+
 class _PainterState extends State<Painter> {
   // variables
   Tool tool = Tool.brush;
@@ -98,7 +102,6 @@ class _PainterState extends State<Painter> {
   List<List<Pixel>> _pixels = [];
   var lastDrawn = [];
   bool backgroundVisible = true;
-  bool isPainting = false;
 
   Image editPixel(int selected, int col, int row) {
     updateRecentColors();
@@ -385,7 +388,8 @@ class _PainterState extends State<Painter> {
                         onPanStart: (details) {
                           setState(() {
                             isPainting = true;
-                            var list = spriteBefore.value;
+                            blockPainting = false;
+                            List<Image> list = List.from(spriteBefore.value);
                             list.insert(0, copyImage(sprites[selected]));
                             spriteBefore.value = list;
                             spriteRedo.value = [];
@@ -393,22 +397,28 @@ class _PainterState extends State<Painter> {
                                 doPaint(details.localPosition, selected);
                             sprites[selected].pixels = _pixels;
                           });
+                          lastPixel = DateTime.now().millisecondsSinceEpoch;
                         },
                         onPanUpdate: (details) {
+                          isPainting = true;
+                          if (blockPainting) return;
                           if (tool == Tool.fill) return;
                           setState(() {
                             sprites[selected] =
                                 doPaint(details.localPosition, selected);
                             sprites[selected].pixels = _pixels;
                           });
+                          // timestamp so we can make sure its properly drawn without interruptions
+                          lastPixel = DateTime.now().millisecondsSinceEpoch;
                         },
                         onPanEnd: (details) {
-                          isPainting = false;
                           lastDrawn = [];
                           setState(() {});
+                          isPainting = false;
+                          blockPainting = true;
                         },
                         child: CustomPaint(
-                            painter: PainterWidget(_pixels, showGrid, isPainting,
+                            painter: PainterWidget(_pixels, showGrid,
                                 background: sprites[selected].frameType ==
                                         FrameTypes.expression
                                     ? getPrimaryImage()?.pixels
@@ -516,13 +526,12 @@ class _PainterState extends State<Painter> {
 
 // painter widget
 class PainterWidget extends CustomPainter {
-  PainterWidget(this.pixels, this.grid, this.isPainting,
+  PainterWidget(this.pixels, this.grid,
       {this.background, this.backgroundVisible = true});
   List<List<Pixel>> pixels;
   List<List<Pixel>>? background;
   bool backgroundVisible;
   bool grid;
-  bool isPainting;
   @override
   void paint(Canvas canvas, Size size) {
     // draw border
@@ -532,6 +541,36 @@ class PainterWidget extends CustomPainter {
     borderPaint.style = PaintingStyle.stroke;
     borderPaint.strokeWidth = 1;
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), borderPaint);
+    // draw checkerboard background, 2x2
+    Paint checkerPaint = Paint();
+    checkerPaint.isAntiAlias = false;
+    checkerPaint.color = Colors.grey[300]!.withOpacity(0.5);
+    checkerPaint.style = PaintingStyle.fill;
+    for (int i = 0; i < pixels.length; i++) {
+      for (int j = 0; j < pixels[i].length; j++) {
+        if (i % 2 == 0) {
+          if (j % 2 == 0) {
+            canvas.drawRect(
+                Rect.fromLTWH(
+                    j * size.width / pixels[j].length,
+                    i * size.height / pixels.length,
+                    size.width / pixels[j].length,
+                    size.height / pixels.length),
+                checkerPaint);
+          }
+        } else {
+          if (j % 2 != 0) {
+            canvas.drawRect(
+                Rect.fromLTWH(
+                    j * size.width / pixels[j].length,
+                    i * size.height / pixels.length,
+                    size.width / pixels[j].length,
+                    size.height / pixels.length),
+                checkerPaint);
+          }
+        }
+      }
+    }
     // draw grid
     if (grid) {
       Paint paint = Paint();
@@ -607,11 +646,6 @@ class PainterWidget extends CustomPainter {
 
   @override
   bool shouldRepaint(PainterWidget oldDelegate) {
-    return isPainting;
+    return (lastPixel+200 > DateTime.now().millisecondsSinceEpoch);
   }
-
-  // @override
-  // bool shouldRepaint(PainterWidget oldDelegate) {
-  //   return true;
-  // }
 }
