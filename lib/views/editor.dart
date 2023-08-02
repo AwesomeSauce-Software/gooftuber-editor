@@ -370,6 +370,7 @@ class _EditorPageState extends State<Editor>
                         ),
                         appBar: AppBar(
                           title: const Text("Frames and Color"),
+                          centerTitle: false,
                           actions: [
                             IconButton(
                               icon: const Icon(Icons.add_rounded),

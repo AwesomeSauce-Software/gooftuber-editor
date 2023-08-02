@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/gestures.dart';
 import 'package:image/image.dart' as img;
 
 import 'package:flutter/material.dart';
@@ -386,6 +387,7 @@ class _PainterState extends State<Painter> {
                     builder: (context, setState) => GestureDetector(
                         behavior: HitTestBehavior.translucent,
                         onPanStart: (details) {
+                          if (details.kind == PointerDeviceKind.trackpad) return;
                           setState(() {
                             isPainting = true;
                             blockPainting = false;
@@ -546,28 +548,20 @@ class PainterWidget extends CustomPainter {
     checkerPaint.isAntiAlias = false;
     checkerPaint.color = Colors.grey[300]!.withOpacity(0.5);
     checkerPaint.style = PaintingStyle.fill;
-    for (int i = 0; i < pixels.length; i++) {
-      for (int j = 0; j < pixels[i].length; j++) {
-        if (i % 2 == 0) {
-          if (j % 2 == 0) {
-            canvas.drawRect(
-                Rect.fromLTWH(
-                    j * size.width / pixels[j].length,
-                    i * size.height / pixels.length,
-                    size.width / pixels[j].length,
-                    size.height / pixels.length),
-                checkerPaint);
+    for (int i = 0; i < size.width / 20; i++) {
+      for (int j = 0; j < size.height / 20; j++) {
+        if ((i + j) % 2 == 0) {
+          // check if we will draw out of bounds and limit it if so
+          double width = 20;
+          double height = 20;
+          if (i * 20 + 20 > size.width) {
+            width = size.width - i * 20;
           }
-        } else {
-          if (j % 2 != 0) {
-            canvas.drawRect(
-                Rect.fromLTWH(
-                    j * size.width / pixels[j].length,
-                    i * size.height / pixels.length,
-                    size.width / pixels[j].length,
-                    size.height / pixels.length),
-                checkerPaint);
+          if (j * 20 + 20 > size.height) {
+            height = size.height - j * 20;
           }
+          canvas.drawRect(
+              Rect.fromLTWH(i * 20, j * 20, width, height), checkerPaint);
         }
       }
     }
