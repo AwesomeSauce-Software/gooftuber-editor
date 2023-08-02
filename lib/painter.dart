@@ -5,8 +5,8 @@ import 'package:image/image.dart' as img;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:pixelart/main.dart';
-import 'package:pixelart/tools/sprite_tools.dart';
+import 'package:gooftuber_editor/main.dart';
+import 'package:gooftuber_editor/tools/sprite_tools.dart';
 
 enum FrameTypes { talking, nontalking, expression }
 

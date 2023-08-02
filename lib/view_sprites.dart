@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:pixelart/main.dart';
-import 'package:pixelart/painter.dart' as painter;
+import 'package:gooftuber_editor/main.dart';
+import 'package:gooftuber_editor/painter.dart' as painter;
 
 class SpritePreview extends StatefulWidget {
   const SpritePreview({super.key});
