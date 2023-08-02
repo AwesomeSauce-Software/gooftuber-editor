@@ -409,14 +409,15 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
       if (!file.name.endsWith('.png')) {
         continue;
       }
+      var type = (file.name.replaceAll('.png', '').toLowerCase() == "talking")? painter.FrameTypes.talking : (file.name.replaceAll('.png', '').toLowerCase() == "nontalking")? painter.FrameTypes.nontalking : painter.FrameTypes.expression;
       var bytes = await file.readAsBytes();
       var pixels = painter.loadFromPng(bytes);
       var image = painter.Image(
-          file.name.replaceAll('.png', ''),
+          (type == painter.FrameTypes.expression)? file.name.replaceAll('.png', '') : '',
           pixels[0].length,
           pixels.length,
           pixels,
-          painter.FrameTypes.expression);
+          type);
       setState(() {
         sprites.add(image);
       });
