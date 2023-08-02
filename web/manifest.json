@@ -1,12 +1,12 @@
 {
-    "name": "pixelart",
-    "short_name": "pixelart",
+    "name": "Gooftuber Avatar Studio",
+    "short_name": "Gooftuber Edit",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "##7b01c2",
+    "theme_color": "##7b01c2",
+    "description": "Gooftuber Avatar Studio - the tool you need to make goofy avatars!",
+    "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [
         {

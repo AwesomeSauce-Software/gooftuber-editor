@@ -548,14 +548,32 @@ class _MyHomePageState extends State<MyHomePage>
               crossAxisCount: 4,
               children: [
                 for (var i = 0; i < colors.length; i++)
-                  InkWell(
-                    onTap: () {
+                  Dismissible(
+                    key: UniqueKey(),
+                    onDismissed: (direction) {
                       setState(() {
-                        painter.colorSet = colors[i];
+                        colors.removeAt(i);
                       });
                     },
-                    child: Card(
-                      color: colors[i],
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        setState(() {
+                          painter.colorSet = colors[i];
+                        });
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: colors[i],
+                          border: (painter.colorSet == colors[i])? Border.all(
+                            strokeAlign: BorderSide.strokeAlignOutside,
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                            width: 3,
+                          ): null,
+                        ),
+                      ),
                     ),
                   ),
               ],
