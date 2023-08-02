@@ -98,8 +98,10 @@ class _PainterState extends State<Painter> {
   List<List<Pixel>> _pixels = [];
   var lastDrawn = [];
   bool backgroundVisible = true;
+  bool isPainting = false;
 
   Image editPixel(int selected, int col, int row) {
+    updateRecentColors();
     switch (tool) {
       case Tool.brush:
         _pixels[row][col].color = colorSet;
@@ -279,20 +281,24 @@ class _PainterState extends State<Painter> {
                     child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          if (sprites[selected].frameType ==
-                                      FrameTypes.expression) IconButton(
-                            tooltip: 'Toggle Background Preview',
-                            icon: backgroundVisible? const Icon(Icons.image_rounded) : const Icon(Icons.image_not_supported_rounded),
-                            onPressed: () {
-                              setState(() {
-                                backgroundVisible = !backgroundVisible;
-                              });
-                            },
-                          ),
-                          IconButton(
+                      if (sprites[selected].frameType == FrameTypes.expression)
+                        IconButton(
+                          tooltip: 'Toggle Background Preview',
+                          icon: backgroundVisible
+                              ? const Icon(Icons.image_rounded)
+                              : const Icon(Icons.image_not_supported_rounded),
+                          onPressed: () {
+                            setState(() {
+                              backgroundVisible = !backgroundVisible;
+                            });
+                          },
+                        ),
+                      IconButton(
                         tooltip: 'Toggle grid',
                         isSelected: showGrid,
-                        icon: showGrid? const Icon(Icons.grid_on_rounded) : const Icon(Icons.grid_off_rounded),
+                        icon: showGrid
+                            ? const Icon(Icons.grid_on_rounded)
+                            : const Icon(Icons.grid_off_rounded),
                         onPressed: () {
                           setState(() {
                             showGrid = !showGrid;
@@ -372,40 +378,45 @@ class _PainterState extends State<Painter> {
                 child: SizedBox(
                   width: min(_width, _height) - 88,
                   height: min(_width, _height) - 88,
-                  child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (details) {
-                        setState(() {
-                          var list = spriteBefore.value;
-                          list.insert(0, copyImage(sprites[selected]));
-                          spriteBefore.value = list;
-                          spriteRedo.value = [];
-                          sprites[selected] =
-                              doPaint(details.localPosition, selected);
-                          sprites[selected].pixels = _pixels;
-                        });
-                      },
-                      onPanUpdate: (details) {
-                        if (tool == Tool.fill) return;
-                        setState(() {
-                          sprites[selected] =
-                              doPaint(details.localPosition, selected);
-                          sprites[selected].pixels = _pixels;
-                        });
-                      },
-                      onPanEnd: (details) {
-                        lastDrawn = [];
-                        setState(() {});
-                      },
-                      child: CustomPaint(
-                          painter: PainterWidget(_pixels, showGrid,
-                              background: sprites[selected].frameType ==
-                                      FrameTypes.expression
-                                  ? getPrimaryImage()?.pixels
-                                  : null,
-                                  backgroundVisible: backgroundVisible),
-                          size: Size(_width > _height ? _height : _width,
-                              _width > _height ? _height : _width))),
+                  // so we dont have to redraw the whole canvas every time
+                  child: StatefulBuilder(
+                    builder: (context, setState) => GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onPanStart: (details) {
+                          setState(() {
+                            isPainting = true;
+                            var list = spriteBefore.value;
+                            list.insert(0, copyImage(sprites[selected]));
+                            spriteBefore.value = list;
+                            spriteRedo.value = [];
+                            sprites[selected] =
+                                doPaint(details.localPosition, selected);
+                            sprites[selected].pixels = _pixels;
+                          });
+                        },
+                        onPanUpdate: (details) {
+                          if (tool == Tool.fill) return;
+                          setState(() {
+                            sprites[selected] =
+                                doPaint(details.localPosition, selected);
+                            sprites[selected].pixels = _pixels;
+                          });
+                        },
+                        onPanEnd: (details) {
+                          isPainting = false;
+                          lastDrawn = [];
+                          setState(() {});
+                        },
+                        child: CustomPaint(
+                            painter: PainterWidget(_pixels, showGrid, isPainting,
+                                background: sprites[selected].frameType ==
+                                        FrameTypes.expression
+                                    ? getPrimaryImage()?.pixels
+                                    : null,
+                                backgroundVisible: backgroundVisible),
+                            size: Size(_width > _height ? _height : _width,
+                                _width > _height ? _height : _width))),
+                  ),
                 ),
               ),
             ),
@@ -413,6 +424,19 @@ class _PainterState extends State<Painter> {
         ],
       ),
     );
+  }
+
+  void updateRecentColors() {
+    List<Color> recentColors = List.from(colorHistory.value);
+    // if already in recent colors, remove it and add it to the front
+    if (recentColors.contains(colorSet)) {
+      recentColors.remove(colorSet);
+    }
+    recentColors.insert(0, colorSet);
+    if (recentColors.length > 24) {
+      recentColors.removeLast();
+    }
+    colorHistory.value = recentColors;
   }
 
   Image doPaint(Offset localPosition, selected) {
@@ -492,11 +516,13 @@ class _PainterState extends State<Painter> {
 
 // painter widget
 class PainterWidget extends CustomPainter {
-  PainterWidget(this.pixels, this.grid, {this.background, this.backgroundVisible = true});
+  PainterWidget(this.pixels, this.grid, this.isPainting,
+      {this.background, this.backgroundVisible = true});
   List<List<Pixel>> pixels;
   List<List<Pixel>>? background;
   bool backgroundVisible;
   bool grid;
+  bool isPainting;
   @override
   void paint(Canvas canvas, Size size) {
     // draw border
@@ -508,11 +534,11 @@ class PainterWidget extends CustomPainter {
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), borderPaint);
     // draw grid
     if (grid) {
+      Paint paint = Paint();
+      paint.color = Colors.black;
+      paint.style = PaintingStyle.stroke;
       for (int i = 0; i < pixels.length; i++) {
         for (int j = 0; j < pixels[i].length; j++) {
-          Paint paint = Paint();
-          paint.color = Colors.black;
-          paint.style = PaintingStyle.stroke;
           paint.strokeWidth = .05;
           canvas.drawRect(
             Rect.fromLTWH(
@@ -528,10 +554,10 @@ class PainterWidget extends CustomPainter {
     // draw background if it exists
     if (background != null && backgroundVisible) {
       debugPrint('has background');
+      Paint paint = Paint();
+      paint.isAntiAlias = false;
       for (int i = 0; i < background!.length; i++) {
         for (int j = 0; j < background![i].length; j++) {
-          Paint paint = Paint();
-          paint.isAntiAlias = false;
           // set opacity
           paint.color = background![i][j].color;
           if (background![i][j].color != Colors.transparent) {
@@ -551,24 +577,41 @@ class PainterWidget extends CustomPainter {
     }
     // draw pixels
     for (int i = 0; i < pixels.length; i++) {
-      for (int j = 0; j < pixels[i].length; j++) {
-        Paint paint = Paint();
-        paint.isAntiAlias = false;
-        paint.color = pixels[i][j].color;
+      int j = 0;
+      while (j < pixels[i].length) {
+        int end = j + 1;
+        while (end < pixels[i].length &&
+            pixels[i][end].color == pixels[i][j].color) {
+          end++;
+        }
+        Pixel pixel = pixels[i][j];
+        Paint paint = Paint()
+          ..isAntiAlias = false
+          ..color = pixel.color
+          ..style = PaintingStyle.fill;
+
         canvas.drawRect(
           Rect.fromLTWH(
-              j * size.width / pixels[j].length,
-              i * size.height / pixels.length,
-              size.width / pixels[j].length,
-              size.height / pixels.length),
+            j * size.width / pixels[j].length,
+            i * size.height / pixels.length,
+            (end - j) * size.width / pixels[j].length,
+            size.height / pixels.length,
+          ),
           paint,
         );
+
+        j = end;
       }
     }
   }
 
   @override
   bool shouldRepaint(PainterWidget oldDelegate) {
-    return true;
+    return isPainting;
   }
+
+  // @override
+  // bool shouldRepaint(PainterWidget oldDelegate) {
+  //   return true;
+  // }
 }

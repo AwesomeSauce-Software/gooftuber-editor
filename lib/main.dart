@@ -14,8 +14,10 @@ import 'package:desktop_drop/desktop_drop.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (isPlatformMacos() || isPlatformLinux() || isPlatformWindows()) await windowManager.ensureInitialized();
-  runApp(const MyApp());
+  if (isPlatformMacos() || isPlatformLinux() || isPlatformWindows()) {
+    await windowManager.ensureInitialized();
+  }
+  runApp(const Gooftuber());
 
   if (isPlatformMacos() || isPlatformLinux() || isPlatformWindows()) {
     // set min size
@@ -27,8 +29,8 @@ Future<void> main() async {
 
 enum Pages { editor, view }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class Gooftuber extends StatelessWidget {
+  const Gooftuber({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +70,8 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
@@ -234,21 +237,6 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   }
 
   Widget bottomBar() {
-        if (isPlatformWeb()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-      // right aligned snackbar
-      SnackBar(
-        content: const Text('This is a web version of the app. It is not fully supported and might be painfully slow. Please use the desktop version instead.'),
-        duration: const Duration(hours: 1),
-        action: SnackBarAction(
-          label: 'Close',
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-        )
-      ),
-    );
-    }
     return Row(
       children: [
         Expanded(
@@ -409,11 +397,17 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
       if (!file.name.endsWith('.png')) {
         continue;
       }
-      var type = (file.name.replaceAll('.png', '').toLowerCase() == "talking")? painter.FrameTypes.talking : (file.name.replaceAll('.png', '').toLowerCase() == "nontalking")? painter.FrameTypes.nontalking : painter.FrameTypes.expression;
+      var type = (file.name.replaceAll('.png', '').toLowerCase() == "talking")
+          ? painter.FrameTypes.talking
+          : (file.name.replaceAll('.png', '').toLowerCase() == "nontalking")
+              ? painter.FrameTypes.nontalking
+              : painter.FrameTypes.expression;
       var bytes = await file.readAsBytes();
       var pixels = painter.loadFromPng(bytes);
       var image = painter.Image(
-          (type == painter.FrameTypes.expression)? file.name.replaceAll('.png', '') : '',
+          (type == painter.FrameTypes.expression)
+              ? file.name.replaceAll('.png', '')
+              : '',
           pixels[0].length,
           pixels.length,
           pixels,
@@ -481,115 +475,23 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                           ],
                         ),
                         appBar: AppBar(
-                            title: const Text("Frames and Color"),
-                            actions: [
-                              IconButton(
-                                icon: const Icon(Icons.add_rounded),
-                                onPressed: () {
-                                  // dialog for sprite name
-                                  showSpriteNameDialog(context);
-                                },
-                              ),
-                            ],
-                          ),
-                        body:
-                            TabBarView(
-                              children: [
-                                ListView(padding: EdgeInsets.zero, children: <Widget>[
-                          for (var i = 0; i < sprites.length; i++)
-                          InkWell(
-                                onTap: () {
-                                  imageSelected.value = i;
-                                },
-                                child: Container(
-                                  color: i == imageSelected.value
-                                      ? Theme.of(context).colorScheme.onInverseSurface
-                                      : null,
-                                  child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ListTile(
-                                    leading: i == imageSelected.value
-                                        ? const Icon(Icons.radio_button_checked_rounded)
-                                        : const Icon(Icons.radio_button_off_rounded),
-                                    trailing: PopupMenuButton(
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 0,
-                                          child: Text('Edit'),
-                                        ),
-                                        if (sprites[i].frameType ==
-                                            painter.FrameTypes.expression)
-                                          const PopupMenuItem(
-                                            value: 1,
-                                            child: Text('Copy'),
-                                          ),
-                                        const PopupMenuItem(
-                                          value: 2,
-                                          child: Text('Delete'),
-                                        ),
-                                      ],
-                                      onSelected: (value) {
-                                        switch (value) {
-                                          case 0:
-                                            setState(() {
-                                              // change name
-                                              nameController.text = sprites[i].name;
-                                              editNameDialog(context, i);
-                                            });
-                                            break;
-                                          case 1:
-                                            setState(() {
-                                              var frameType = sprites[i].frameType;
-                                              if (frameType !=
-                                                  painter.FrameTypes.expression) {
-                                                frameType =
-                                                    painter.FrameTypes.expression;
-                                              }
-                                              var image = copyImage(sprites[i]);
-                                              image.name += ' copy';
-                                              sprites.add(image);
-                                            });
-                                            break;
-                                          case 2:
-                                            setState(() {
-                                              sprites.removeAt(i);
-                                              if (imageSelected.value >=
-                                                  sprites.length) {
-                                                imageSelected.value =
-                                                    sprites.length - 1;
-                                              }
-                                              if (sprites.isEmpty) {
-                                                nameController.text = '';
-                                              }
-                                            });
-                                            break;
-                                        }
-                                      },
-                                    ),
-                                    title: Text(sprites[i].frameType ==
-                                            painter.FrameTypes.expression
-                                        ? sprites[i].name
-                                        : sprites[i].frameType ==
-                                                painter.FrameTypes.talking
-                                            ? 'Talking frame'
-                                            : 'Non-talking frame'),
-                                  ),
-                                    if (previewsVisible && !isImageEmpty(sprites[i])) SizedBox(width:128, height:128, child: Image.memory(Uint8List.fromList(sprites[i].saveAsPng()), gaplessPlayback: true)),
-                                  ],
-                                ),),
-                          )
-                        ]),
-                        Center(child: ColorPicker(
-                          portraitOnly: true,
-                          pickerColor: painter.colorSet,
-                          onColorChanged: (color) {
-                            painter.colorSet = color;
-                          },
-                          pickerAreaHeightPercent: 1.0,
-                        ),),
-                              ],
+                          title: const Text("Frames and Color"),
+                          actions: [
+                            IconButton(
+                              icon: const Icon(Icons.add_rounded),
+                              onPressed: () {
+                                // dialog for sprite name
+                                showSpriteNameDialog(context);
+                              },
                             ),
+                          ],
+                        ),
+                        body: TabBarView(
+                          children: [
+                            framesDrawer(context),
+                            colorDrawer(),
+                          ],
+                        ),
                       ),
                     );
                   })),
@@ -622,6 +524,136 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         ],
       ),
     );
+  }
+
+  Widget colorDrawer() {
+    return StatefulBuilder(
+      builder: (context, setState) => ListView(
+        children: [
+          ColorPicker(
+          portraitOnly: true,
+          pickerColor: painter.colorSet,
+          onColorChanged: (color) {
+            painter.colorSet = color;
+          },
+          pickerAreaHeightPercent: 1.0,
+        ),
+        if (colorHistory.value.isNotEmpty) const Divider(),
+        // recent colors in grid
+        ValueListenableBuilder(
+          valueListenable: colorHistory,
+          builder: (context, colors, _) {
+            return GridView.count(
+              shrinkWrap: true,
+              crossAxisCount: 4,
+              children: [
+                for (var i = 0; i < colors.length; i++)
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        painter.colorSet = colors[i];
+                      });
+                    },
+                    child: Card(
+                      color: colors[i],
+                    ),
+                  ),
+              ],
+            );
+          }
+        ),
+        ],
+      ),
+    );
+  }
+
+  ListView framesDrawer(BuildContext context) {
+    return ListView(padding: EdgeInsets.zero, children: <Widget>[
+      for (var i = 0; i < sprites.length; i++)
+        InkWell(
+          onTap: () {
+            imageSelected.value = i;
+          },
+          child: Container(
+            color: i == imageSelected.value
+                ? Theme.of(context).colorScheme.onInverseSurface
+                : null,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: i == imageSelected.value
+                      ? const Icon(Icons.radio_button_checked_rounded)
+                      : const Icon(Icons.radio_button_off_rounded),
+                  trailing: PopupMenuButton(
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 0,
+                        child: Text('Edit'),
+                      ),
+                      if (sprites[i].frameType == painter.FrameTypes.expression)
+                        const PopupMenuItem(
+                          value: 1,
+                          child: Text('Copy'),
+                        ),
+                      const PopupMenuItem(
+                        value: 2,
+                        child: Text('Delete'),
+                      ),
+                    ],
+                    onSelected: (value) {
+                      switch (value) {
+                        case 0:
+                          setState(() {
+                            // change name
+                            nameController.text = sprites[i].name;
+                            editNameDialog(context, i);
+                          });
+                          break;
+                        case 1:
+                          setState(() {
+                            var frameType = sprites[i].frameType;
+                            if (frameType != painter.FrameTypes.expression) {
+                              frameType = painter.FrameTypes.expression;
+                            }
+                            var image = copyImage(sprites[i]);
+                            image.name += ' copy';
+                            sprites.add(image);
+                          });
+                          break;
+                        case 2:
+                          setState(() {
+                            sprites.removeAt(i);
+                            if (imageSelected.value >= sprites.length) {
+                              imageSelected.value = sprites.length - 1;
+                            }
+                            if (sprites.isEmpty) {
+                              nameController.text = '';
+                            }
+                          });
+                          break;
+                      }
+                    },
+                  ),
+                  title:
+                      Text(sprites[i].frameType == painter.FrameTypes.expression
+                          ? sprites[i].name
+                          : sprites[i].frameType == painter.FrameTypes.talking
+                              ? 'Talking frame'
+                              : 'Non-talking frame'),
+                ),
+                if (previewsVisible && !isImageEmpty(sprites[i]))
+                  SizedBox(
+                      width: 128,
+                      height: 128,
+                      child: Image.memory(
+                          Uint8List.fromList(sprites[i].saveAsPng()),
+                          gaplessPlayback: true)),
+              ],
+            ),
+          ),
+        )
+    ]);
   }
 
   void editNameDialog(BuildContext context, int i) {
@@ -1042,3 +1074,4 @@ List<painter.Image> sprites = [];
 ValueNotifier<List<painter.Image>> spriteBefore = ValueNotifier([]);
 ValueNotifier<List<painter.Image>> spriteRedo = ValueNotifier([]);
 ValueNotifier<int> imageSelected = ValueNotifier(0);
+ValueNotifier<List<Color>> colorHistory = ValueNotifier([]);
