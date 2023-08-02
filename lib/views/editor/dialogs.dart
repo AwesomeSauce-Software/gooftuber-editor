@@ -130,6 +130,17 @@ void editNameDialog(
                           });
                         },
                       ),
+                      onTap: () {
+                        if (talkingEnabled) {
+                          showSnackbar(
+                              context, 'A talking sprite already exists!');
+                        } else {
+                          setState(() {
+                            frameType = painter.FrameTypes.talking;
+                            nameController.text = '';
+                          });
+                        }
+                      },
                     ),
                     ListTile(
                       enabled: !nontalkingEnabled,
@@ -149,6 +160,17 @@ void editNameDialog(
                           });
                         },
                       ),
+                      onTap: () {
+                        if (nontalkingEnabled) {
+                          showSnackbar(context,
+                              'A non-talking sprite already exists!');
+                        } else {
+                          setState(() {
+                            frameType = painter.FrameTypes.nontalking;
+                            nameController.text = '';
+                          });
+                        }
+                      },
                     ),
                     ListTile(
                       title: const Text("Expression Frame"),
@@ -161,18 +183,18 @@ void editNameDialog(
                           });
                         },
                       ),
+                      onTap: () {
+                        setState(() {
+                          frameType = painter.FrameTypes.expression;
+                        });
+                      },
                     ),
                   ],
                 ),
                 if (frameType == painter.FrameTypes.expression)
                   Padding(
                       padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 0.0),
-                      child: Autocomplete(
-                        fieldViewBuilder: (BuildContext context,
-                            TextEditingController textEditingController,
-                            FocusNode focusNode,
-                            VoidCallback onFieldSubmitted) {
-                          return TextField(
+                      child: TextField(
                             decoration: const InputDecoration(
                               label: Text('Sprite Name'),
                               border: OutlineInputBorder(),
@@ -180,10 +202,7 @@ void editNameDialog(
                             ),
                             textAlign: TextAlign.center,
                             controller: nameController,
-                            focusNode: focusNode,
                             onSubmitted: (String value) {
-                              onFieldSubmitted();
-
                               if (value == '' &&
                                   frameType == painter.FrameTypes.expression) {
                                 // show error
@@ -221,18 +240,7 @@ void editNameDialog(
 
                               Navigator.pop(context);
                             },
-                          );
-                        },
-                        optionsBuilder: (TextEditingValue textEditingValue) {
-                          if (textEditingValue.text == '') {
-                            return const Iterable<String>.empty();
-                          }
-                          return ['talking', 'nontalking', 'Expression_'];
-                        },
-                        onSelected: (String selection) {
-                          debugPrint('You just selected $selection');
-                        },
-                      )),
+                          )),
               ],
             ),
           ),
@@ -321,6 +329,16 @@ void showSpriteNameDialog(
                           });
                         },
                       ),
+                      onTap: () {
+                        if (doesTalkingExist()) {
+                          showSnackbar(context,
+                              'A talking sprite already exists! Please delete it before creating a new one.');
+                        } else {
+                          setState(() {
+                            frameType = painter.FrameTypes.talking;
+                          });
+                        }
+                      },
                     ),
                     ListTile(
                       title: const Text("Non-Talking Frame"),
@@ -333,6 +351,16 @@ void showSpriteNameDialog(
                           });
                         },
                       ),
+                      onTap: () {
+                        if (doesNonTalkingExist()) {
+                          showSnackbar(context,
+                              'A non-talking sprite already exists! Please delete it before creating a new one.');
+                        } else {
+                          setState(() {
+                            frameType = painter.FrameTypes.nontalking;
+                          });
+                        }
+                      },
                     ),
                     ListTile(
                       enabled: expressionEnabled,
@@ -351,6 +379,16 @@ void showSpriteNameDialog(
                           });
                         },
                       ),
+                      onTap: () {
+                        if (!expressionEnabled) {
+                          showSnackbar(context,
+                              'You must create a talking and/or non-talking sprite before creating an expression sprite.');
+                        } else {
+                          setState(() {
+                            frameType = painter.FrameTypes.expression;
+                          });
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -358,12 +396,7 @@ void showSpriteNameDialog(
                 if (frameType == painter.FrameTypes.expression)
                   Padding(
                       padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 0.0),
-                      child: Autocomplete(
-                        fieldViewBuilder: (BuildContext context,
-                            TextEditingController textEditingController,
-                            FocusNode focusNode,
-                            VoidCallback onFieldSubmitted) {
-                          return TextField(
+                      child: TextField(
                             decoration: const InputDecoration(
                               label: Text('Sprite Name'),
                               border: OutlineInputBorder(),
@@ -371,10 +404,7 @@ void showSpriteNameDialog(
                             ),
                             textAlign: TextAlign.center,
                             controller: nameController,
-                            focusNode: focusNode,
                             onSubmitted: (String value) {
-                              onFieldSubmitted();
-
                               if (value == '' &&
                                   frameType == painter.FrameTypes.expression) {
                                 // show error
@@ -420,18 +450,7 @@ void showSpriteNameDialog(
 
                               Navigator.pop(context);
                             },
-                          );
-                        },
-                        optionsBuilder: (TextEditingValue textEditingValue) {
-                          if (textEditingValue.text == '') {
-                            return const Iterable<String>.empty();
-                          }
-                          return ['talking', 'nontalking', 'Expression_'];
-                        },
-                        onSelected: (String selection) {
-                          debugPrint('You just selected $selection');
-                        },
-                      )),
+                          )),
               ],
             ),
           ),
