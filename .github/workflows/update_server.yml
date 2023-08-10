@@ -14,4 +14,4 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE }}
         script: |
           cd
-          ./deploy-editor.sh
+          ./update-editor.sh
