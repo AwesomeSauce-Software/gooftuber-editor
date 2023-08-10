@@ -64,7 +64,7 @@ Future<String?> showCodeDialog(context) {
           ),
           actions: [
             TextButton(onPressed: () {
-              var url = "https://docs.awesomesauce.software/books/gooftuber/page/syncing-avatars-from-editor-to-studio";
+              var url = "https://docs.awesomesauce.software/gooftuber/editor/sync.html";
               launchUrl(Uri.parse(url));
             }, child: const Text('Help')),
             TextButton(
