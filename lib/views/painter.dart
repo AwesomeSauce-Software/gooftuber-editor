@@ -215,37 +215,39 @@ class _PainterState extends State<Painter> {
               children: [
                 Expanded(
                   child: Row(children: [
-                    IconButton(
-                      tooltip: 'Brush size toggle',
-                      icon: const Icon(Icons.brush_rounded),
-                      onPressed: tool != Tool.fill
-                          ? () {
-                              // toggle brush size
-                              setState(() {
-                                if (brushSize == 1) {
-                                  brushSize = 5;
-                                } else {
-                                  brushSize = 1;
-                                }
-                              });
-                            }
-                          : null,
-                    ),
-                    Slider(
-                        // show slider value below slider
-                        value: brushSize,
-                        onChanged: (value) {
-                          setState(() {
-                            brushSize = value;
-                          });
-                        },
-                        onChangeEnd: (value) {
-                          // unfocus slider
-                          FocusScope.of(context).requestFocus(FocusNode());
-                        },
-                        min: 1,
-                        max: 10,
-                        divisions: 9),
+                    PopupMenuButton(
+                        tooltip: 'Brush size toggle',
+                        icon: const Icon(Icons.brush_rounded),
+                        itemBuilder: (context) => [
+                              PopupMenuItem(
+                                enabled: false,
+                                onTap: null,
+                                child: StatefulBuilder(
+                                    builder: (context, setState) {
+                                  return Column(
+                                    children: [
+                                      const Text('Brush size'),
+                                      Slider(
+                                          // show slider value below slider
+                                          value: brushSize,
+                                          onChanged: (value) {
+                                            setState(() {
+                                              brushSize = value;
+                                            });
+                                          },
+                                          onChangeEnd: (value) {
+                                            // unfocus slider
+                                            FocusScope.of(context)
+                                                .requestFocus(FocusNode());
+                                          },
+                                          min: 1,
+                                          max: 10,
+                                          divisions: 9),
+                                    ],
+                                  );
+                                }),
+                              )
+                            ]),
                   ]),
                 ),
                 Expanded(
@@ -387,7 +389,8 @@ class _PainterState extends State<Painter> {
                     builder: (context, setState) => GestureDetector(
                         behavior: HitTestBehavior.translucent,
                         onPanStart: (details) {
-                          if (details.kind == PointerDeviceKind.trackpad) return;
+                          if (details.kind == PointerDeviceKind.trackpad)
+                            return;
                           setState(() {
                             isPainting = true;
                             blockPainting = false;
@@ -640,6 +643,6 @@ class PainterWidget extends CustomPainter {
 
   @override
   bool shouldRepaint(PainterWidget oldDelegate) {
-    return (lastPixel+200 > DateTime.now().millisecondsSinceEpoch);
+    return (lastPixel + 200 > DateTime.now().millisecondsSinceEpoch);
   }
 }
