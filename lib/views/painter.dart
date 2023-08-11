@@ -84,7 +84,7 @@ class Painter extends StatefulWidget {
 
 enum Tool { brush, eraser, fill, pick }
 
-Color colorSet = Colors.black;
+ValueNotifier<Color> colorSet = ValueNotifier(Colors.black);
 
 bool isPainting = false;
 int lastPixel = 0;
@@ -108,7 +108,7 @@ class _PainterState extends State<Painter> {
     updateRecentColors();
     switch (tool) {
       case Tool.brush:
-        _pixels[row][col].color = colorSet;
+        _pixels[row][col].color = colorSet.value;
         sprites[selected].pixels = _pixels;
         lastDrawn = [row, col];
         break;
@@ -136,7 +136,7 @@ class _PainterState extends State<Painter> {
             if (visited[r][c]) continue;
             visited[r][c] = true;
             if (_pixels[r][c].color == _pixels[row][col].color) {
-              newPixels[r][c].color = colorSet;
+              newPixels[r][c].color = colorSet.value;
               newPixels[r][c].empty = false;
               queue.add([r + 1, c]);
               queue.add([r - 1, c]);
@@ -160,8 +160,9 @@ class _PainterState extends State<Painter> {
         });
         break;
       case Tool.pick:
+        tool = Tool.brush;
         setState(() {
-          colorSet = _pixels[row][col].color;
+          colorSet.value = _pixels[row][col].color;
         });
         break;
     }
@@ -217,7 +218,7 @@ class _PainterState extends State<Painter> {
                   child: Row(children: [
                     PopupMenuButton(
                         tooltip: 'Brush size toggle',
-                        icon: const Icon(Icons.brush_rounded),
+                        icon: const Icon(Icons.line_weight_rounded),
                         itemBuilder: (context) => [
                               PopupMenuItem(
                                 enabled: false,
@@ -326,10 +327,10 @@ class _PainterState extends State<Painter> {
                                       pickerAreaHeightPercent: 0.5,
                                       labelTypes: const [ColorLabelType.rgb],
                                       enableAlpha: true,
-                                      pickerColor: colorSet,
+                                      pickerColor: colorSet.value,
                                       onColorChanged: (color) {
                                         setState(() {
-                                          colorSet = color;
+                                          colorSet.value = color;
                                         });
                                       },
                                     ),
@@ -346,15 +347,16 @@ class _PainterState extends State<Painter> {
                               });
                         },
                       ),
-                      // IconButton(
-                      //   isSelected: tool == Tool.pick,
-                      //   icon: const Icon(Icons.colorize_rounded),
-                      //   onPressed: () {
-                      //     setState(() {
-                      //       tool = Tool.pick;
-                      //     });
-                      //   },
-                      // ),
+                      IconButton(
+                        tooltip: 'Color picker',
+                        isSelected: tool == Tool.pick,
+                        icon: const Icon(Icons.colorize_rounded),
+                        onPressed: () {
+                          setState(() {
+                            tool = Tool.pick;
+                          });
+                        },
+                      ),
                       IconButton(
                         tooltip: 'Toggle background color',
                         icon: const Icon(Icons.format_paint_rounded),
@@ -419,6 +421,11 @@ class _PainterState extends State<Painter> {
                         onPanEnd: (details) {
                           lastDrawn = [];
                           setState(() {});
+                          if (tool == Tool.pick) {
+                              this.setState(() {
+                                tool = Tool.brush;
+                              });
+                            }
                           isPainting = false;
                           blockPainting = true;
                         },
@@ -444,10 +451,10 @@ class _PainterState extends State<Painter> {
   void updateRecentColors() {
     List<Color> recentColors = List.from(colorHistory.value);
     // if already in recent colors, remove it and add it to the front
-    if (recentColors.contains(colorSet)) {
-      recentColors.remove(colorSet);
+    if (recentColors.contains(colorSet.value)) {
+      recentColors.remove(colorSet.value);
     }
-    recentColors.insert(0, colorSet);
+    recentColors.insert(0, colorSet.value);
     if (recentColors.length > 24) {
       recentColors.removeLast();
     }
@@ -473,7 +480,7 @@ class _PainterState extends State<Painter> {
   }
 
   Image doPick(int row, int col, selected) {
-    colorSet = sprites[selected].pixels[row][col].color;
+    colorSet.value = sprites[selected].pixels[row][col].color;
     return sprites[selected];
   }
 

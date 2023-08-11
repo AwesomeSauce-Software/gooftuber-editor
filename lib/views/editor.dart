@@ -457,13 +457,18 @@ class _EditorPageState extends State<Editor>
     return StatefulBuilder(
       builder: (context, setState) => ListView(
         children: [
-          ColorPicker(
-            portraitOnly: true,
-            pickerColor: painter.colorSet,
-            onColorChanged: (color) {
-              painter.colorSet = color;
-            },
-            pickerAreaHeightPercent: 1.0,
+          ValueListenableBuilder(
+            valueListenable: painter.colorSet,
+            builder: (context, colorSet, _) {
+              return ColorPicker(
+                portraitOnly: true,
+                pickerColor: colorSet,
+                onColorChanged: (color) {
+                  painter.colorSet.value = color;
+                },
+                pickerAreaHeightPercent: 1.0,
+              );
+            }
           ),
           if (colorHistory.value.isNotEmpty) const Divider(),
           // recent colors in grid
@@ -486,7 +491,7 @@ class _EditorPageState extends State<Editor>
                           borderRadius: BorderRadius.circular(8),
                           onTap: () {
                             setState(() {
-                              painter.colorSet = colors[i];
+                              painter.colorSet.value = colors[i];
                             });
                           },
                           child: Container(
