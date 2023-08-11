@@ -24,6 +24,9 @@ Future<void> main() async {
 
 enum Pages { editor, view }
 
+enum DrawerState { modal, pinned }
+enum DrawerTypes { navRail, layers }
+
 class Gooftuber extends StatelessWidget {
   const Gooftuber({super.key});
 

@@ -372,62 +372,64 @@ class _PainterState extends State<Painter> {
               ],
             ),
           ),
-          SizedBox(
-            // use the smaller dimension
-            width: min(_width, _height) - 88,
-            height: min(_width, _height) - 88,
-            child: Container(
-              color: _backgroundColor,
-              child: Center(
-                child: SizedBox(
-                  width: min(_width, _height) - 88,
-                  height: min(_width, _height) - 88,
-                  // so we dont have to redraw the whole canvas every time
-                  child: StatefulBuilder(
-                    builder: (context, setState) => GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onPanStart: (details) {
-                          if (details.kind == PointerDeviceKind.trackpad) return;
-                          setState(() {
+          Expanded(
+            child: SizedBox(
+              // use the smaller dimension
+              width: min(_width, _height) - 88,
+              height: min(_width, _height) - 88,
+              child: Container(
+                color: _backgroundColor,
+                child: Center(
+                  child: SizedBox(
+                    width: min(_width, _height) - 88,
+                    height: min(_width, _height) - 88,
+                    // so we dont have to redraw the whole canvas every time
+                    child: StatefulBuilder(
+                      builder: (context, setState) => GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onPanStart: (details) {
+                            if (details.kind == PointerDeviceKind.trackpad) return;
+                            setState(() {
+                              isPainting = true;
+                              blockPainting = false;
+                              List<Image> list = List.from(spriteBefore.value);
+                              list.insert(0, copyImage(sprites[selected]));
+                              spriteBefore.value = list;
+                              spriteRedo.value = [];
+                              sprites[selected] =
+                                  doPaint(details.localPosition, selected);
+                              sprites[selected].pixels = _pixels;
+                            });
+                            lastPixel = DateTime.now().millisecondsSinceEpoch;
+                          },
+                          onPanUpdate: (details) {
                             isPainting = true;
-                            blockPainting = false;
-                            List<Image> list = List.from(spriteBefore.value);
-                            list.insert(0, copyImage(sprites[selected]));
-                            spriteBefore.value = list;
-                            spriteRedo.value = [];
-                            sprites[selected] =
-                                doPaint(details.localPosition, selected);
-                            sprites[selected].pixels = _pixels;
-                          });
-                          lastPixel = DateTime.now().millisecondsSinceEpoch;
-                        },
-                        onPanUpdate: (details) {
-                          isPainting = true;
-                          if (blockPainting) return;
-                          if (tool == Tool.fill) return;
-                          setState(() {
-                            sprites[selected] =
-                                doPaint(details.localPosition, selected);
-                            sprites[selected].pixels = _pixels;
-                          });
-                          // timestamp so we can make sure its properly drawn without interruptions
-                          lastPixel = DateTime.now().millisecondsSinceEpoch;
-                        },
-                        onPanEnd: (details) {
-                          lastDrawn = [];
-                          setState(() {});
-                          isPainting = false;
-                          blockPainting = true;
-                        },
-                        child: CustomPaint(
-                            painter: PainterWidget(_pixels, showGrid,
-                                background: sprites[selected].frameType ==
-                                        FrameTypes.expression
-                                    ? getPrimaryImage()?.pixels
-                                    : null,
-                                backgroundVisible: backgroundVisible),
-                            size: Size(_width > _height ? _height : _width,
-                                _width > _height ? _height : _width))),
+                            if (blockPainting) return;
+                            if (tool == Tool.fill) return;
+                            setState(() {
+                              sprites[selected] =
+                                  doPaint(details.localPosition, selected);
+                              sprites[selected].pixels = _pixels;
+                            });
+                            // timestamp so we can make sure its properly drawn without interruptions
+                            lastPixel = DateTime.now().millisecondsSinceEpoch;
+                          },
+                          onPanEnd: (details) {
+                            lastDrawn = [];
+                            setState(() {});
+                            isPainting = false;
+                            blockPainting = true;
+                          },
+                          child: CustomPaint(
+                              painter: PainterWidget(_pixels, showGrid,
+                                  background: sprites[selected].frameType ==
+                                          FrameTypes.expression
+                                      ? getPrimaryImage()?.pixels
+                                      : null,
+                                  backgroundVisible: backgroundVisible),
+                              size: Size(_width > _height ? _height : _width,
+                                  _width > _height ? _height : _width))),
+                    ),
                   ),
                 ),
               ),

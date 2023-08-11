@@ -20,12 +20,12 @@ class Editor extends StatefulWidget {
   State<Editor> createState() => _EditorPageState();
 }
 
-var navRailVisible = true;
-var picturesVisible = true;
+var navRailState = DrawerState.pinned;
+var picturesState = DrawerState.pinned;
 
 class _EditorPageState extends State<Editor>
     with SingleTickerProviderStateMixin {
-      void setupKeyboardShortcuts() {
+  void setupKeyboardShortcuts() {
     RawKeyboard.instance.addListener((RawKeyEvent event) {
       if (event.runtimeType != RawKeyDownEvent) return;
 
@@ -51,13 +51,13 @@ class _EditorPageState extends State<Editor>
           event.isKeyPressed(LogicalKeyboardKey.keyL)) {
         // layers
         setState(() {
-          picturesVisible = !picturesVisible;
+          picturesState = toggle(picturesState, DrawerTypes.layers);
         });
       } else if (event.isControlPressed &&
           event.isKeyPressed(LogicalKeyboardKey.keyM)) {
         // menu
         setState(() {
-          navRailVisible = !navRailVisible;
+          navRailState = toggle(navRailState, DrawerTypes.navRail);
         });
       } else if (event.isControlPressed &&
           event.isKeyPressed(LogicalKeyboardKey.keyA)) {
@@ -71,6 +71,27 @@ class _EditorPageState extends State<Editor>
         });
       }
     });
+  }
+
+  DrawerState toggle(DrawerState state, DrawerTypes types) {
+    if (types == DrawerTypes.navRail) {
+      if (state == DrawerState.pinned) {
+        return DrawerState.modal;
+      } else if (state == DrawerState.modal) {
+        scaffold.currentState?.openDrawer();
+      } else {
+        return DrawerState.pinned;
+      }
+    } else {
+      if (state == DrawerState.pinned) {
+        return DrawerState.modal;
+      } else if (state == DrawerState.modal) {
+        scaffold.currentState?.openEndDrawer();
+      } else {
+        return DrawerState.pinned;
+      }
+    }
+    return state;
   }
 
   @override
@@ -90,88 +111,122 @@ class _EditorPageState extends State<Editor>
 
   var currentPage = Pages.editor;
 
+  Widget navRail() {
+    return FutureBuilder(
+        future: isApiUp(),
+        builder: (context, apiUp) {
+          return NavigationRail(
+            groupAlignment: 0,
+            labelType: NavigationRailLabelType.all,
+            // color selected chip
+            destinations: <NavigationRailDestination>[
+              const NavigationRailDestination(
+                icon: Icon(Icons.edit_rounded),
+                label: Text('Editor'),
+              ),
+              const NavigationRailDestination(
+                icon: Icon(Icons.photo_album_rounded),
+                label: Text('View'),
+              ),
+              const NavigationRailDestination(
+                icon: Icon(Icons.folder_rounded),
+                label: Text('Import'),
+              ),
+              const NavigationRailDestination(
+                icon: Icon(Icons.save_alt_rounded),
+                label: Text('Export'),
+              ),
+              if (apiUp.data ?? false)
+                const NavigationRailDestination(
+                  icon: Icon(Icons.cloud_upload_rounded),
+                  label: Text('Sync'),
+                ),
+              if (navRailState != DrawerState.pinned)
+                const NavigationRailDestination(
+                  icon: Icon(Icons.push_pin_rounded),
+                  label: Text('Pin'),
+                ),
+              if (navRailState == DrawerState.pinned)
+                const NavigationRailDestination(
+                  icon: Icon(Icons.push_pin_rounded),
+                  label: Text('Unpin'),
+                ),
+            ],
+            selectedIndex: currentPage.index,
+            useIndicator: true,
+            onDestinationSelected: (int index) async {
+              if (index == 0) {
+                // editor
+                setState(() {
+                  currentPage = Pages.editor;
+                });
+              } else if (index == 1) {
+                // view
+                setState(() {
+                  currentPage = Pages.view;
+                });
+              } else if (index == 2) {
+                List<painter.Image> newSprites = await importFile(context);
+                setState(() {
+                  sprites = newSprites;
+                });
+              } else if (index == 3) {
+                String json = exportJson(sprites);
+                exportFile(context, json);
+              } else if (index == 4) {
+                showCodeDialog(context).then((value) async {
+                  if (value != null) {
+                    var result = await submitAvatar(exportJson(sprites), value);
+                    if (!result) {
+                      if (context.mounted) {
+                        showSnackbar(context, 'Upload failed');
+                      }
+                    } else {
+                      if (context.mounted) {
+                        showSnackbar(context, 'Upload successful!');
+                      }
+                    }
+                  }
+                });
+              } else if (index == 5) {
+                if (navRailState == DrawerState.pinned) {
+                  scaffold.currentState?.openDrawer();
+                  setState(() {
+                    navRailState = DrawerState.modal;
+                  });
+                } else {
+                  scaffold.currentState?.closeDrawer();
+                  setState(() {
+                    navRailState = DrawerState.pinned;
+                  });
+                }
+              }
+            },
+          );
+        });
+  }
+
+  GlobalKey<ScaffoldState> scaffold = GlobalKey<ScaffoldState>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: scaffold,
       bottomNavigationBar: Container(
         color: Theme.of(context).colorScheme.secondaryContainer,
         child: bottomBar(),
       ),
+      endDrawer: Drawer(child: drawer(context)),
+      drawer: Drawer(
+        width: 100,
+        child: navRail(),
+      ),
       body: SafeArea(
           child: Row(
         children: [
-          if (navRailVisible)
-            FutureBuilder(
-              future: isApiUp(),
-              builder: (context, apiUp) {
-                return NavigationRail(
-                  groupAlignment: 0,
-                  labelType: NavigationRailLabelType.all,
-                  // color selected chip
-                  destinations: <NavigationRailDestination>[
-                    const NavigationRailDestination(
-                      icon: Icon(Icons.edit_rounded),
-                      label: Text('Editor'),
-                    ),
-                    const NavigationRailDestination(
-                      icon: Icon(Icons.photo_album_rounded),
-                      label: Text('View'),
-                    ),
-                    const NavigationRailDestination(
-                      icon: Icon(Icons.folder_rounded),
-                      label: Text('Import'),
-                    ),
-                    const NavigationRailDestination(
-                      icon: Icon(Icons.save_alt_rounded),
-                      label: Text('Export'),
-                    ),
-                    if (apiUp.data ?? false) const NavigationRailDestination(
-                      icon: Icon(Icons.cloud_upload_rounded),
-                      label: Text('Sync'),
-                    ),
-                  ],
-                  selectedIndex: currentPage.index,
-                  useIndicator: true,
-                  onDestinationSelected: (int index) async {
-                    if (index == 0) {
-                      // editor
-                      setState(() {
-                        currentPage = Pages.editor;
-                      });
-                    } else if (index == 1) {
-                      // view
-                      setState(() {
-                        currentPage = Pages.view;
-                      });
-                    } else if (index == 2) {
-                      List<painter.Image> newSprites = await importFile(context);
-                      setState(() {
-                        sprites = newSprites;
-                      });
-                    } else if (index == 3) {
-                      String json = exportJson(sprites);
-                      exportFile(context, json);
-                    } else if (index == 4) {
-                      showCodeDialog(context).then((value) async {
-                        if (value != null) {
-                          var result = await submitAvatar(exportJson(sprites), value);
-                          if (!result) {
-                            if (context.mounted) {
-                              showSnackbar(context, 'Upload failed');
-                            }
-                          } else {
-                            if (context.mounted) {
-                              showSnackbar(context, 'Upload successful!');
-                            }
-                          }
-                        }
-                      });
-                    }
-                  },
-                );
-              }
-            ),
-          if (navRailVisible) const VerticalDivider(width: 1),
+          if (navRailState == DrawerState.pinned) navRail(),
+          if (navRailState == DrawerState.pinned)
+            const VerticalDivider(width: 1),
           if (currentPage == Pages.editor)
             Expanded(
                 child: ValueListenableBuilder(
@@ -189,9 +244,12 @@ class _EditorPageState extends State<Editor>
                       return const painter.Painter();
                     })),
           if (currentPage == Pages.view) const Expanded(child: SpritePreview()),
-          if (picturesVisible && currentPage == Pages.editor)
+          if (picturesState == DrawerState.pinned &&
+              currentPage == Pages.editor)
             const VerticalDivider(width: 1),
-          if (picturesVisible && currentPage == Pages.editor) drawer(context)
+          if (picturesState == DrawerState.pinned &&
+              currentPage == Pages.editor)
+            drawer(context)
         ],
       )),
     );
@@ -205,12 +263,12 @@ class _EditorPageState extends State<Editor>
             children: [
               IconButton(
                 tooltip: 'Toggle Navigation Rail',
-                icon: navRailVisible
+                icon: navRailState == DrawerState.pinned
                     ? const Icon(Icons.menu_rounded)
                     : const Icon(Icons.menu_open_rounded),
                 onPressed: () {
                   setState(() {
-                    navRailVisible = !navRailVisible;
+                    navRailState = toggle(navRailState, DrawerTypes.navRail);
                   });
                 },
               ),
@@ -221,11 +279,12 @@ class _EditorPageState extends State<Editor>
                       return IconButton(
                         tooltip: 'Undo',
                         icon: const Icon(Icons.undo_rounded),
-                        onPressed:
-                            (sprite.isNotEmpty) ? () {
-                              undo(currentPage);
-                              undoRedo.value++;
-                            } : null,
+                        onPressed: (sprite.isNotEmpty)
+                            ? () {
+                                undo(currentPage);
+                                undoRedo.value++;
+                              }
+                            : null,
                       );
                     }),
               if (currentPage == Pages.editor)
@@ -235,11 +294,12 @@ class _EditorPageState extends State<Editor>
                       return IconButton(
                         tooltip: 'Redo',
                         icon: const Icon(Icons.redo_rounded),
-                        onPressed:
-                            (sprite.isNotEmpty) ? () {
-                              redo(currentPage);
-                              undoRedo.value++;
-                            } : null,
+                        onPressed: (sprite.isNotEmpty)
+                            ? () {
+                                redo(currentPage);
+                                undoRedo.value++;
+                              }
+                            : null,
                       );
                     }),
             ],
@@ -290,15 +350,16 @@ class _EditorPageState extends State<Editor>
                     onSubmitted: (String value) {},
                   ),
                 ),
-                IconButton(
-                    tooltip: 'Save Project',
-                    icon: const Icon(Icons.save_rounded),
-                    onPressed: isEnabled() ? () => saveProject() : null),
+              IconButton(
+                  tooltip: 'Save Project',
+                  icon: const Icon(Icons.save_rounded),
+                  onPressed: isEnabled() ? () => saveProject() : null),
               IconButton(
                 tooltip: 'Toggle Theme',
                 icon: appTheme.value != 2
-                    ? appTheme.value == 0? const Icon(Icons.dark_mode_rounded)
-                    : const Icon(Icons.light_mode_rounded)
+                    ? appTheme.value == 0
+                        ? const Icon(Icons.dark_mode_rounded)
+                        : const Icon(Icons.light_mode_rounded)
                     : const Icon(Icons.auto_awesome_rounded),
                 onPressed: () {
                   setState(() {
@@ -325,12 +386,12 @@ class _EditorPageState extends State<Editor>
               if (currentPage == Pages.editor)
                 IconButton(
                   tooltip: 'Toggle Frames',
-                  icon: picturesVisible
+                  icon: picturesState == DrawerState.pinned
                       ? const Icon(Icons.layers_rounded)
                       : const Icon(Icons.layers_clear_rounded),
                   onPressed: () {
                     setState(() {
-                      picturesVisible = !picturesVisible;
+                      picturesState = toggle(picturesState, DrawerTypes.layers);
                     });
                   },
                 ),
@@ -400,6 +461,17 @@ class _EditorPageState extends State<Editor>
                           ],
                         ),
                         appBar: AppBar(
+                          leading: picturesState != DrawerState.pinned
+                              ? IconButton(
+                                  icon: const Icon(Icons.push_pin_rounded),
+                                  onPressed: () {
+                                    scaffold.currentState?.closeEndDrawer();
+                                    setState(() {
+                                      picturesState = DrawerState.pinned;
+                                    });
+                                  },
+                                )
+                              : null,
                           title: const Text("Frames and Color"),
                           centerTitle: false,
                           actions: [
@@ -541,10 +613,10 @@ class _EditorPageState extends State<Editor>
                         value: 0,
                         child: Text('Edit'),
                       ),
-                        const PopupMenuItem(
-                          value: 1,
-                          child: Text('Copy'),
-                        ),
+                      const PopupMenuItem(
+                        value: 1,
+                        child: Text('Copy'),
+                      ),
                       const PopupMenuItem(
                         value: 2,
                         child: Text('Export as PNG'),
