@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:gooftuber_editor/main.dart';
 import 'package:gooftuber_editor/tools/apitools.dart';
+import 'package:gooftuber_editor/tools/platformtools.dart';
 import 'package:gooftuber_editor/views/dialogs.dart';
 import 'package:gooftuber_editor/views/editor/dialogs.dart';
 import 'package:gooftuber_editor/views/editor/utils.dart';
@@ -25,7 +26,7 @@ var picturesVisible = true;
 
 class _EditorPageState extends State<Editor>
     with SingleTickerProviderStateMixin {
-      void setupKeyboardShortcuts() {
+  void setupKeyboardShortcuts() {
     RawKeyboard.instance.addListener((RawKeyEvent event) {
       if (event.runtimeType != RawKeyDownEvent) return;
 
@@ -102,75 +103,77 @@ class _EditorPageState extends State<Editor>
         children: [
           if (navRailVisible)
             FutureBuilder(
-              future: isApiUp(),
-              builder: (context, apiUp) {
-                return NavigationRail(
-                  groupAlignment: 0,
-                  labelType: NavigationRailLabelType.all,
-                  // color selected chip
-                  destinations: <NavigationRailDestination>[
-                    const NavigationRailDestination(
-                      icon: Icon(Icons.edit_rounded),
-                      label: Text('Editor'),
-                    ),
-                    const NavigationRailDestination(
-                      icon: Icon(Icons.photo_album_rounded),
-                      label: Text('View'),
-                    ),
-                    const NavigationRailDestination(
-                      icon: Icon(Icons.folder_rounded),
-                      label: Text('Import'),
-                    ),
-                    const NavigationRailDestination(
-                      icon: Icon(Icons.save_alt_rounded),
-                      label: Text('Export'),
-                    ),
-                    if (apiUp.data ?? false) const NavigationRailDestination(
-                      icon: Icon(Icons.cloud_upload_rounded),
-                      label: Text('Sync'),
-                    ),
-                  ],
-                  selectedIndex: currentPage.index,
-                  useIndicator: true,
-                  onDestinationSelected: (int index) async {
-                    if (index == 0) {
-                      // editor
-                      setState(() {
-                        currentPage = Pages.editor;
-                      });
-                    } else if (index == 1) {
-                      // view
-                      setState(() {
-                        currentPage = Pages.view;
-                      });
-                    } else if (index == 2) {
-                      List<painter.Image> newSprites = await importFile(context);
-                      setState(() {
-                        sprites = newSprites;
-                      });
-                    } else if (index == 3) {
-                      String json = exportJson(sprites);
-                      exportFile(context, json);
-                    } else if (index == 4) {
-                      showCodeDialog(context).then((value) async {
-                        if (value != null) {
-                          var result = await submitAvatar(exportJson(sprites), value);
-                          if (!result) {
-                            if (context.mounted) {
-                              showSnackbar(context, 'Upload failed');
-                            }
-                          } else {
-                            if (context.mounted) {
-                              showSnackbar(context, 'Upload successful!');
+                future: isApiUp(),
+                builder: (context, apiUp) {
+                  return NavigationRail(
+                    groupAlignment: 0,
+                    labelType: NavigationRailLabelType.all,
+                    // color selected chip
+                    destinations: <NavigationRailDestination>[
+                      const NavigationRailDestination(
+                        icon: Icon(Icons.edit_rounded),
+                        label: Text('Editor'),
+                      ),
+                      const NavigationRailDestination(
+                        icon: Icon(Icons.photo_album_rounded),
+                        label: Text('View'),
+                      ),
+                      const NavigationRailDestination(
+                        icon: Icon(Icons.folder_rounded),
+                        label: Text('Import'),
+                      ),
+                      const NavigationRailDestination(
+                        icon: Icon(Icons.save_alt_rounded),
+                        label: Text('Export'),
+                      ),
+                      if (apiUp.data ?? false)
+                        const NavigationRailDestination(
+                          icon: Icon(Icons.cloud_upload_rounded),
+                          label: Text('Sync'),
+                        ),
+                    ],
+                    selectedIndex: currentPage.index,
+                    useIndicator: true,
+                    onDestinationSelected: (int index) async {
+                      if (index == 0) {
+                        // editor
+                        setState(() {
+                          currentPage = Pages.editor;
+                        });
+                      } else if (index == 1) {
+                        // view
+                        setState(() {
+                          currentPage = Pages.view;
+                        });
+                      } else if (index == 2) {
+                        List<painter.Image> newSprites =
+                            await importFile(context);
+                        setState(() {
+                          sprites = newSprites;
+                        });
+                      } else if (index == 3) {
+                        String json = exportJson(sprites);
+                        exportFile(context, json);
+                      } else if (index == 4) {
+                        showCodeDialog(context).then((value) async {
+                          if (value != null) {
+                            var result =
+                                await submitAvatar(exportJson(sprites), value);
+                            if (!result) {
+                              if (context.mounted) {
+                                showSnackbar(context, 'Upload failed');
+                              }
+                            } else {
+                              if (context.mounted) {
+                                showSnackbar(context, 'Upload successful!');
+                              }
                             }
                           }
-                        }
-                      });
-                    }
-                  },
-                );
-              }
-            ),
+                        });
+                      }
+                    },
+                  );
+                }),
           if (navRailVisible) const VerticalDivider(width: 1),
           if (currentPage == Pages.editor)
             Expanded(
@@ -221,11 +224,12 @@ class _EditorPageState extends State<Editor>
                       return IconButton(
                         tooltip: 'Undo',
                         icon: const Icon(Icons.undo_rounded),
-                        onPressed:
-                            (sprite.isNotEmpty) ? () {
-                              undo(currentPage);
-                              undoRedo.value++;
-                            } : null,
+                        onPressed: (sprite.isNotEmpty)
+                            ? () {
+                                undo(currentPage);
+                                undoRedo.value++;
+                              }
+                            : null,
                       );
                     }),
               if (currentPage == Pages.editor)
@@ -235,11 +239,12 @@ class _EditorPageState extends State<Editor>
                       return IconButton(
                         tooltip: 'Redo',
                         icon: const Icon(Icons.redo_rounded),
-                        onPressed:
-                            (sprite.isNotEmpty) ? () {
-                              redo(currentPage);
-                              undoRedo.value++;
-                            } : null,
+                        onPressed: (sprite.isNotEmpty)
+                            ? () {
+                                redo(currentPage);
+                                undoRedo.value++;
+                              }
+                            : null,
                       );
                     }),
             ],
@@ -270,6 +275,21 @@ class _EditorPageState extends State<Editor>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              FutureBuilder(builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  if (!snapshot.data!) {
+                    return IconButton(tooltip: 'You are up to date!', icon: const Icon(Icons.check_rounded), onPressed: () { 
+                      showSnackbar(context, 'You are up to date!');
+                     },);
+                  } else {
+                    return IconButton(tooltip: '', icon: const Icon(Icons.update_rounded), onPressed: () { 
+                      showUpdateDialog(context);
+                     },);
+                  }
+                } else {
+                  return const SizedBox.shrink();
+                }
+              }, future: isClientOutOfDate(),),
               if (currentPage == Pages.editor)
                 SizedBox(
                   width: 40,
@@ -290,15 +310,16 @@ class _EditorPageState extends State<Editor>
                     onSubmitted: (String value) {},
                   ),
                 ),
-                IconButton(
-                    tooltip: 'Save Project',
-                    icon: const Icon(Icons.save_rounded),
-                    onPressed: isEnabled() ? () => saveProject() : null),
+              IconButton(
+                  tooltip: 'Save Project',
+                  icon: const Icon(Icons.save_rounded),
+                  onPressed: isEnabled() ? () => saveProject() : null),
               IconButton(
                 tooltip: 'Toggle Theme',
                 icon: appTheme.value != 2
-                    ? appTheme.value == 0? const Icon(Icons.dark_mode_rounded)
-                    : const Icon(Icons.light_mode_rounded)
+                    ? appTheme.value == 0
+                        ? const Icon(Icons.dark_mode_rounded)
+                        : const Icon(Icons.light_mode_rounded)
                     : const Icon(Icons.auto_awesome_rounded),
                 onPressed: () {
                   setState(() {
@@ -405,10 +426,23 @@ class _EditorPageState extends State<Editor>
                           actions: [
                             IconButton(
                               icon: const Icon(Icons.add_rounded),
-                              onPressed: () {
-                                // dialog for sprite name
-                                showSpriteNameDialog(context, nameController,
-                                    wxhController, setState);
+                              onPressed: () async {
+                                if (isPlatformWeb()) {
+                                  var download =
+                                      await showDownloadDialog(context);
+                                  if (!download!) {
+                                    if (context.mounted) {
+                                      showSpriteNameDialog(
+                                          context,
+                                          nameController,
+                                          wxhController,
+                                          setState);
+                                    }
+                                  }
+                                } else {
+                                  showSpriteNameDialog(context, nameController,
+                                      wxhController, setState);
+                                }
                               },
                             ),
                           ],
@@ -458,18 +492,17 @@ class _EditorPageState extends State<Editor>
       builder: (context, setState) => ListView(
         children: [
           ValueListenableBuilder(
-            valueListenable: painter.colorSet,
-            builder: (context, colorSet, _) {
-              return ColorPicker(
-                portraitOnly: true,
-                pickerColor: colorSet,
-                onColorChanged: (color) {
-                  painter.colorSet.value = color;
-                },
-                pickerAreaHeightPercent: 1.0,
-              );
-            }
-          ),
+              valueListenable: painter.colorSet,
+              builder: (context, colorSet, _) {
+                return ColorPicker(
+                  portraitOnly: true,
+                  pickerColor: colorSet,
+                  onColorChanged: (color) {
+                    painter.colorSet.value = color;
+                  },
+                  pickerAreaHeightPercent: 1.0,
+                );
+              }),
           if (colorHistory.value.isNotEmpty) const Divider(),
           // recent colors in grid
           ValueListenableBuilder(
@@ -546,10 +579,10 @@ class _EditorPageState extends State<Editor>
                         value: 0,
                         child: Text('Edit'),
                       ),
-                        const PopupMenuItem(
-                          value: 1,
-                          child: Text('Copy'),
-                        ),
+                      const PopupMenuItem(
+                        value: 1,
+                        child: Text('Copy'),
+                      ),
                       const PopupMenuItem(
                         value: 2,
                         child: Text('Export as PNG'),

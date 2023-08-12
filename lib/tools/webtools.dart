@@ -13,3 +13,7 @@ void saveFileOnWeb(Uint8List bytes, String filename) {
   document.body!.children.remove(anchor);
   Url.revokeObjectUrl(url);
 }
+
+void reloadPage() {
+  window.location.reload();
+}
