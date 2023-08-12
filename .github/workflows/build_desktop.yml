@@ -9,6 +9,9 @@ jobs:
   build-and-release-linux:
     runs-on: ubuntu-latest
 
+    permissions:
+        contents: write
+
     steps:
       - uses: actions/checkout@v2
       - uses: subosito/flutter-action@v1
@@ -37,6 +40,9 @@ jobs:
   build-and-release-windows:
     runs-on: windows-latest
 
+    permissions:
+        contents: write
+
     steps:
       - uses: actions/checkout@v2
       - uses: subosito/flutter-action@v1
@@ -62,6 +68,9 @@ jobs:
 
   build-and-release-macos:
     runs-on: macos-latest
+
+    permissions:
+        contents: write
 
     steps:
       - uses: actions/checkout@v2
