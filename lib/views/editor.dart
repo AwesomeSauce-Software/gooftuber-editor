@@ -12,6 +12,7 @@ import 'package:gooftuber_editor/views/painter.dart' as painter;
 import 'package:gooftuber_editor/tools/jsonexport.dart';
 import 'package:gooftuber_editor/tools/sprite_tools.dart';
 import 'package:gooftuber_editor/views/view_sprites.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Editor extends StatefulWidget {
   const Editor({super.key, required this.title});
@@ -275,21 +276,83 @@ class _EditorPageState extends State<Editor>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              FutureBuilder(builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  if (!snapshot.data!) {
-                    return IconButton(tooltip: 'You are up to date!', icon: const Icon(Icons.check_rounded), onPressed: () { 
-                      showSnackbar(context, 'You are up to date!');
-                     },);
+              FutureBuilder(
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    if (!snapshot.data!) {
+                      return IconButton(
+                        tooltip: 'You are up to date!',
+                        icon: const Icon(Icons.check_rounded),
+                        onPressed: () {
+                          showSnackbar(
+                              context, 'You are up to date on $currentTag!',
+                              action: SnackBarAction(
+                                  label: "About",
+                                  onPressed: () {
+                                    showAboutDialog(
+                                        context: context,
+                                        applicationIcon:
+                                            Image.asset('assets/icon.png',
+                                                width: 48, height: 48),
+                                        applicationName: 'Avatar Maker',
+                                        applicationVersion: currentTag,
+                                        children: [
+                                          const Text('Made by AwesomeSauce Software', textAlign: TextAlign.center),
+                                          const SizedBox(height: 20),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              IconButton(
+                                                  tooltip: 'Changelog',
+                                                  onPressed: () {
+                                                    showChangelogDialog(
+                                                        context);
+                                                  },
+                                                  icon: const Icon(Icons
+                                                      .speaker_notes_rounded)),
+                                              IconButton(
+                                                  tooltip: 'Source',
+                                                  onPressed: () => launchUrl(
+                                                      Uri.parse(
+                                                          "https://github.com/AwesomeSauce-Software/gooftuber-editor")),
+                                                  icon: const Icon(
+                                                      Icons.code_rounded)),
+                                            ],
+                                          )
+                                        ]);
+                                  }));
+                        },
+                      );
+                    } else {
+                      return IconButton(
+                        tooltip: '',
+                        icon: const Icon(Icons.update_rounded),
+                        onPressed: () {
+                          showUpdateDialog(context);
+                        },
+                      );
+                    }
                   } else {
-                    return IconButton(tooltip: '', icon: const Icon(Icons.update_rounded), onPressed: () { 
-                      showUpdateDialog(context);
-                     },);
+                    // spinning loading icon
+                    if (snapshot.hasError) {
+                      return IconButton(
+                        tooltip: 'Error!',
+                        icon: const Icon(Icons.warning_rounded),
+                        onPressed: () {
+                          showSnackbar(context, 'Failed to get latest version!',
+                              color: Colors.redAccent);
+                        },
+                      );
+                    }
+                    return const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(),
+                    );
                   }
-                } else {
-                  return const SizedBox.shrink();
-                }
-              }, future: isClientOutOfDate(),),
+                },
+                future: isClientOutOfDate(),
+              ),
               if (currentPage == Pages.editor)
                 SizedBox(
                   width: 40,

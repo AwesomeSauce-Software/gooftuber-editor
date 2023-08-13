@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:gooftuber_editor/main.dart';
+import 'package:gooftuber_editor/tools/apitools.dart';
 import 'package:gooftuber_editor/tools/platformtools.dart';
 import 'package:gooftuber_editor/tools/webtools.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void showSnackbar(context, String text) {
+void showSnackbar(context, String text, {Color? color, SnackBarAction? action}) {
   double width = MediaQuery.of(context).size.width;
   if (width < 400) {
     width = 0;
@@ -12,6 +14,7 @@ void showSnackbar(context, String text) {
   ScaffoldMessenger.of(context).showSnackBar(
     // right aligned snackbar
     SnackBar(
+      backgroundColor: color,
       content: Text(text),
       behavior: SnackBarBehavior.floating,
       margin: EdgeInsets.only(
@@ -20,8 +23,49 @@ void showSnackbar(context, String text) {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
       ),
+      action: action,
     ),
   );
+}
+
+Future<void> showChangelogDialog(BuildContext context) async {
+  if (context.mounted) {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('What\'s new?'),
+          content: Builder(
+            builder: (context) {
+              return FutureBuilder(
+                future: getChangelog(currentTag),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return SingleChildScrollView(
+                      child: Text(snapshot.data.toString()),
+                    );
+                  } else {
+                    return const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [CircularProgressIndicator()],
+                    );
+                  }
+                },
+              );
+            }
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 Future<bool?> showUpdateDialog(BuildContext context) async {

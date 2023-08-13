@@ -1,82 +1,75 @@
-
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:gooftuber_editor/main.dart';
+import 'package:gooftuber_editor/tools/parsing/github.dart';
 import 'package:http/http.dart' as http;
 
 const apiBase = "https://api.awesomesauce.software";
 
-class GitTags {
-    String ref;
-    String nodeId;
-    String url;
-    Object object;
+Future<String> getChangelog(String tag) async {
+  // get the tag sha from github
+  const url =
+      "https://api.github.com/repos/Awesomesauce-Software/gooftuber-editor/git/refs/tags";
+  var tags = await http.get(Uri.parse(url));
 
-    GitTags({
-        required this.ref,
-        required this.nodeId,
-        required this.url,
-        required this.object,
-    });
-
-    factory GitTags.fromJson(Map<String, dynamic> json) => GitTags(
-        ref: json["ref"],
-        nodeId: json["node_id"],
-        url: json["url"],
-        object: Object.fromJson(json["object"]),
-    );
-
-    Map<String, dynamic> toJson() => {
-        "ref": ref,
-        "node_id": nodeId,
-        "url": url,
-        "object": object.toJson(),
-    };
-}
-
-class Object {
-    String sha;
-    String type;
-    String url;
-
-    Object({
-        required this.sha,
-        required this.type,
-        required this.url,
-    });
-
-    factory Object.fromJson(Map<String, dynamic> json) => Object(
-        sha: json["sha"],
-        type: json["type"],
-        url: json["url"],
-    );
-
-    Map<String, dynamic> toJson() => {
-        "sha": sha,
-        "type": type,
-        "url": url,
-    };
-}
-
-
-Future<bool?> isClientOutOfDate() {
-  // check if client is out of date by comparing version numbers with github tags
-
-  const url = "https://api.github.com/repos/Awesomesauce-Software/gooftuber-editor/git/refs/tags";
-  return http.get(Uri.parse(url)).then((response) {
+  if (tags.statusCode == 200) {
+    List<GitTags> gitTagsFromJson(String str) =>
+        List<GitTags>.from(json.decode(str).map((x) => GitTags.fromJson(x)));
+    List<GitTags> gitTags = gitTagsFromJson(tags.body);
+    GitTags tagMatched = gitTags.firstWhere(
+        (element) => element.ref == "refs/tags/$tag",
+        orElse: () => GitTags(
+            ref: "",
+            nodeId: "",
+            url: "",
+            object: Object(sha: "", type: "", url: "")));
+    String latestTag = tagMatched.object.sha;
+    debugPrint(latestTag);
+    // get the changelog from github
+    var url =
+        "https://api.github.com/repos/AwesomeSauce-Software/gooftuber-editor/git/tags/$latestTag";
+    var response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
-      List<GitTags> gitTagsFromJson(String str) => List<GitTags>.from(json.decode(str).map((x) => GitTags.fromJson(x)));
-      List<GitTags> gitTags = gitTagsFromJson(response.body);
-      String latestTag = gitTags.last.ref.replaceAll("refs/tags/", "");
-      String currentTag = "v1.0.1";
-      if (latestTag != currentTag) {
-        return true;
+      Map<String, dynamic> gitTagFromJson(String str) =>
+          Map<String, dynamic>.from(json.decode(str));
+      Map<String, dynamic> gitTag = gitTagFromJson(response.body);
+      var message = gitTag["message"];
+      if (message.replaceAll("\n", "").replaceAll("\r", "") != "") {
+        return message;
       } else {
-        return false;
+        return "No changelog for this version";
       }
     } else {
-      return null;
+      return "Error getting changelog";
     }
-  });
+  } else {
+    return "Error getting changelog";
+  }
+}
+
+Future<bool?> isClientOutOfDate() async {
+  // check if client is out of date by comparing version numbers with github tags
+  const url =
+      "https://api.github.com/repos/Awesomesauce-Software/gooftuber-editor/git/refs/tags";
+  var tags = await http.get(Uri.parse(url));
+  if (tags.statusCode == 200) {
+    List<GitTags> gitTagsFromJson(String str) =>
+        List<GitTags>.from(json.decode(str).map((x) => GitTags.fromJson(x)));
+    List<GitTags> gitTags = gitTagsFromJson(tags.body);
+    String latestTag = gitTags.last.ref.replaceAll("refs/tags/", "");
+    if (tagToVersion(latestTag) > tagToVersion(currentTag)) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return null;
+  }
+}
+
+int tagToVersion(String tag) {
+  return int.parse(tag.replaceAll(".", "").replaceAll("v", ""));
 }
 
 Future<bool> isApiUp() {
@@ -92,7 +85,9 @@ Future<bool> isApiUp() {
 }
 
 Future<bool> submitAvatar(String json, String code) {
-  return http.post(Uri.parse("$apiBase/upload-own/$code"), body: json).then((response) {
+  return http
+      .post(Uri.parse("$apiBase/upload-own/$code"), body: json)
+      .then((response) {
     if (response.statusCode == 200) {
       return true;
     } else {
