@@ -17,6 +17,8 @@ void showSnackbar(context, String text, {Color? color, SnackBarAction? action}) 
       backgroundColor: color,
       content: Text(text),
       behavior: SnackBarBehavior.floating,
+      dismissDirection: DismissDirection.startToEnd,
+      showCloseIcon: !isPlatformMobile(),
       margin: EdgeInsets.only(
           left: width == 0 ? 10 : width - 400 - 10, bottom: 10, right: 10),
       duration: const Duration(seconds: 2),
@@ -79,8 +81,21 @@ Future<bool?> showUpdateDialog(BuildContext context) async {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('A new version is available! 🎉'),
-          content: const Text(
-              'Do you want to download the new version of the app?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Changes:", style: TextStyle(fontWeight: FontWeight.bold)),
+              FutureBuilder(builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return Text(snapshot.data.toString());
+                } else {
+                  return const CircularProgressIndicator();
+                }
+              }, future: getChangelog('latest')),
+              const Text(
+                  'Do you want to download the new version of the app?'),
+            ],
+          ),
           actions: <Widget>[
             TextButton(
               child: const Text('No'),

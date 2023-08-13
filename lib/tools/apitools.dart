@@ -8,6 +8,14 @@ import 'package:http/http.dart' as http;
 const apiBase = "https://api.awesomesauce.software";
 
 Future<String> getChangelog(String tag) async {
+  if (tag == 'latest') {
+    var latest = await getLatestTag();
+    if (latest == null) {
+      return 'Error getting Changelog!';
+    } else {
+      tag = latest;
+    }
+  }
   // get the tag sha from github
   const url =
       "https://api.github.com/repos/Awesomesauce-Software/gooftuber-editor/git/refs/tags";
@@ -48,23 +56,43 @@ Future<String> getChangelog(String tag) async {
   }
 }
 
-Future<bool?> isClientOutOfDate() async {
-  // check if client is out of date by comparing version numbers with github tags
+enum ClientState { upToDate, outOfDate, error }
+
+String? latestTagCache;
+
+Future<String?> getLatestTag() async {
+  // check if cached in latestTagCache
+  if (latestTagCache != null) {
+    return latestTagCache;
+  }
+  // get the tag sha from github
   const url =
       "https://api.github.com/repos/Awesomesauce-Software/gooftuber-editor/git/refs/tags";
   var tags = await http.get(Uri.parse(url));
+
   if (tags.statusCode == 200) {
     List<GitTags> gitTagsFromJson(String str) =>
         List<GitTags>.from(json.decode(str).map((x) => GitTags.fromJson(x)));
     List<GitTags> gitTags = gitTagsFromJson(tags.body);
     String latestTag = gitTags.last.ref.replaceAll("refs/tags/", "");
-    if (tagToVersion(latestTag) > tagToVersion(currentTag)) {
-      return true;
-    } else {
-      return false;
-    }
+    latestTagCache = latestTag;
+    return latestTag;
   } else {
     return null;
+  }
+}
+
+Future<ClientState> isClientOutOfDate() async {
+  // check if client is out of date by comparing version numbers with github tags
+  String? latestTag = await getLatestTag();
+  if (latestTag != null) {
+    if (tagToVersion(latestTag) > tagToVersion(currentTag)) {
+      return ClientState.outOfDate;
+    } else {
+      return ClientState.upToDate;
+    }
+  } else {
+    return ClientState.error;
   }
 }
 

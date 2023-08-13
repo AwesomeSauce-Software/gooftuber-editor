@@ -207,242 +207,250 @@ class _PainterState extends State<Painter> {
     return Container(
       color: _backgroundColor,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        // mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            color: Theme.of(context).colorScheme.surface,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Row(children: [
-                    PopupMenuButton(
-                        tooltip: 'Brush size toggle',
-                        icon: const Icon(Icons.line_weight_rounded),
-                        itemBuilder: (context) => [
-                              PopupMenuItem(
-                                enabled: false,
-                                onTap: null,
-                                child: StatefulBuilder(
-                                    builder: (context, setState) {
-                                  return Column(
-                                    children: [
-                                      const Text('Brush size'),
-                                      Slider(
-                                          // show slider value below slider
-                                          value: brushSize,
-                                          onChanged: (value) {
-                                            setState(() {
-                                              brushSize = value;
-                                            });
-                                          },
-                                          onChangeEnd: (value) {
-                                            // unfocus slider
-                                            FocusScope.of(context)
-                                                .requestFocus(FocusNode());
-                                          },
-                                          min: 1,
-                                          max: 10,
-                                          divisions: 9),
-                                    ],
-                                  );
-                                }),
-                              )
-                            ]),
-                  ]),
-                ),
-                Expanded(
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                      // eraser
-                      IconButton(
-                          tooltip: 'Eraser',
-                          isSelected: tool == Tool.eraser,
-                          icon: const Icon(Icons.clear_rounded),
-                          onPressed: () {
-                            setState(() {
-                              tool = Tool.eraser;
-                            });
-                          }),
-                      IconButton(
-                          tooltip: 'Brush',
-                          isSelected: tool == Tool.brush,
-                          icon: const Icon(Icons.brush_rounded),
-                          onPressed: () {
-                            setState(() {
-                              tool = Tool.brush;
-                            });
-                          }),
-                      IconButton(
-                          tooltip: 'Fill',
-                          isSelected: tool == Tool.fill,
-                          icon: const Icon(Icons.format_color_fill_rounded),
-                          onPressed: () {
-                            setState(() {
-                              tool = Tool.fill;
-                            });
-                          }),
-                    ])),
-                Expanded(
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                      if (sprites[selected].frameType == FrameTypes.expression)
-                        IconButton(
-                          tooltip: 'Toggle Background Preview',
-                          icon: backgroundVisible
-                              ? const Icon(Icons.image_rounded)
-                              : const Icon(Icons.image_not_supported_rounded),
-                          onPressed: () {
-                            setState(() {
-                              backgroundVisible = !backgroundVisible;
-                            });
-                          },
-                        ),
-                      IconButton(
-                        tooltip: 'Toggle grid',
-                        isSelected: showGrid,
-                        icon: showGrid
-                            ? const Icon(Icons.grid_on_rounded)
-                            : const Icon(Icons.grid_off_rounded),
-                        onPressed: () {
-                          setState(() {
-                            showGrid = !showGrid;
-                          });
-                        },
-                      ),
-                      IconButton(
-                        tooltip: 'Color picker',
-                        icon: const Icon(Icons.color_lens_rounded),
-                        onPressed: () {
-                          showDialog(
-                              context: context,
-                              builder: (context) {
-                                return AlertDialog(
-                                  title: const Text("Select a color!"),
-                                  content: SingleChildScrollView(
-                                    child: ColorPicker(
-                                      portraitOnly: true,
-                                      pickerAreaHeightPercent: 0.5,
-                                      labelTypes: const [ColorLabelType.rgb],
-                                      enableAlpha: true,
-                                      pickerColor: colorSet.value,
-                                      onColorChanged: (color) {
-                                        setState(() {
-                                          colorSet.value = color;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: const Text("Close"),
-                                    ),
-                                  ],
-                                );
-                              });
-                        },
-                      ),
-                      IconButton(
-                        tooltip: 'Color picker',
-                        isSelected: tool == Tool.pick,
-                        icon: const Icon(Icons.colorize_rounded),
-                        onPressed: () {
-                          setState(() {
-                            tool = Tool.pick;
-                          });
-                        },
-                      ),
-                      IconButton(
-                        tooltip: 'Toggle background color',
-                        icon: const Icon(Icons.format_paint_rounded),
-                        onPressed: () {
-                          // toggle background color
-                          setState(() {
-                            if (_backgroundColor == Colors.grey) {
-                              // if brightness is bright, use white.
-                              _backgroundColor = Colors.transparent;
-                            } else {
-                              _backgroundColor = Colors.grey;
-                            }
-                          });
-                        },
-                      ),
-                    ]))
-              ],
-            ),
-          ),
-          SizedBox(
-            // use the smaller dimension
-            width: min(_width, _height) - 88,
-            height: min(_width, _height) - 88,
+          topBar(context, selected),
+          const SizedBox(height: 4),
+          Center(
             child: Container(
               color: _backgroundColor,
-              child: Center(
+              child: FittedBox(
+                fit: BoxFit.contain,
                 child: SizedBox(
-                  width: min(_width, _height) - 88,
-                  height: min(_width, _height) - 88,
-                  // so we dont have to redraw the whole canvas every time
-                  child: StatefulBuilder(
-                    builder: (context, setState) => GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onPanStart: (details) {
-                          if (details.kind == PointerDeviceKind.trackpad)
-                            return;
-                          setState(() {
+                  width: min(MediaQuery.of(context).size.width,
+                          MediaQuery.of(context).size.height) -
+                      88,
+                  height: min(MediaQuery.of(context).size.width,
+                          MediaQuery.of(context).size.height) -
+                      88,
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: StatefulBuilder(
+                      builder: (context, setState) => GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onPanStart: (details) {
+                            if (details.kind == PointerDeviceKind.trackpad) {
+                              return;
+                            }
+                            setState(() {
+                              isPainting = true;
+                              blockPainting = false;
+                              List<Image> list = List.from(spriteBefore.value);
+                              list.insert(0, copyImage(sprites[selected]));
+                              spriteBefore.value = list;
+                              spriteRedo.value = [];
+                              sprites[selected] =
+                                  doPaint(details.localPosition, selected);
+                              sprites[selected].pixels = _pixels;
+                            });
+                            lastPixel = DateTime.now().millisecondsSinceEpoch;
+                          },
+                          onPanUpdate: (details) {
                             isPainting = true;
-                            blockPainting = false;
-                            List<Image> list = List.from(spriteBefore.value);
-                            list.insert(0, copyImage(sprites[selected]));
-                            spriteBefore.value = list;
-                            spriteRedo.value = [];
-                            sprites[selected] =
-                                doPaint(details.localPosition, selected);
-                            sprites[selected].pixels = _pixels;
-                          });
-                          lastPixel = DateTime.now().millisecondsSinceEpoch;
-                        },
-                        onPanUpdate: (details) {
-                          isPainting = true;
-                          if (blockPainting) return;
-                          if (tool == Tool.fill) return;
-                          setState(() {
-                            sprites[selected] =
-                                doPaint(details.localPosition, selected);
-                            sprites[selected].pixels = _pixels;
-                          });
-                          // timestamp so we can make sure its properly drawn without interruptions
-                          lastPixel = DateTime.now().millisecondsSinceEpoch;
-                        },
-                        onPanEnd: (details) {
-                          lastDrawn = [];
-                          setState(() {});
-                          if (tool == Tool.pick) {
+                            if (blockPainting) return;
+                            if (tool == Tool.fill) return;
+                            setState(() {
+                              sprites[selected] =
+                                  doPaint(details.localPosition, selected);
+                              sprites[selected].pixels = _pixels;
+                            });
+                            // timestamp so we can make sure its properly drawn without interruptions
+                            lastPixel = DateTime.now().millisecondsSinceEpoch;
+                          },
+                          onPanEnd: (details) {
+                            lastDrawn = [];
+                            setState(() {});
+                            if (tool == Tool.pick) {
                               this.setState(() {
                                 tool = Tool.brush;
                               });
                             }
-                          isPainting = false;
-                          blockPainting = true;
-                        },
-                        child: CustomPaint(
-                            painter: PainterWidget(_pixels, showGrid,
-                                background: sprites[selected].frameType ==
-                                        FrameTypes.expression
-                                    ? getPrimaryImage()?.pixels
-                                    : null,
-                                backgroundVisible: backgroundVisible),
-                            size: Size(_width > _height ? _height : _width,
-                                _width > _height ? _height : _width))),
+                            isPainting = false;
+                            blockPainting = true;
+                          },
+                          child: CustomPaint(
+                              painter: PainterWidget(_pixels, showGrid,
+                                  background: sprites[selected].frameType ==
+                                          FrameTypes.expression
+                                      ? getPrimaryImage()?.pixels
+                                      : null,
+                                  backgroundVisible: backgroundVisible),
+                              size: Size(_width > _height ? _height : _width,
+                                  _width > _height ? _height : _width))),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Container topBar(BuildContext context, int selected) {
+    return Container(
+      color: Theme.of(context).colorScheme.surface,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Row(children: [
+              PopupMenuButton(
+                  tooltip: 'Brush size toggle',
+                  icon: const Icon(Icons.line_weight_rounded),
+                  itemBuilder: (context) => [
+                        PopupMenuItem(
+                          enabled: false,
+                          onTap: null,
+                          child: StatefulBuilder(builder: (context, setState) {
+                            return Column(
+                              children: [
+                                const Text('Brush size'),
+                                Slider(
+                                    // show slider value below slider
+                                    value: brushSize,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        brushSize = value;
+                                      });
+                                    },
+                                    onChangeEnd: (value) {
+                                      // unfocus slider
+                                      FocusScope.of(context)
+                                          .requestFocus(FocusNode());
+                                      // close popup menu
+                                      Navigator.of(context).pop();
+                                    },
+                                    min: 1,
+                                    max: 10,
+                                    divisions: 9),
+                              ],
+                            );
+                          }),
+                        )
+                      ]),
+            ]),
+          ),
+          Expanded(
+              child:
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            // eraser
+            IconButton(
+                tooltip: 'Eraser',
+                isSelected: tool == Tool.eraser,
+                icon: const Icon(Icons.clear_rounded),
+                onPressed: () {
+                  setState(() {
+                    tool = Tool.eraser;
+                  });
+                }),
+            IconButton(
+                tooltip: 'Brush',
+                isSelected: tool == Tool.brush,
+                icon: const Icon(Icons.brush_rounded),
+                onPressed: () {
+                  setState(() {
+                    tool = Tool.brush;
+                  });
+                }),
+            IconButton(
+                tooltip: 'Fill',
+                isSelected: tool == Tool.fill,
+                icon: const Icon(Icons.format_color_fill_rounded),
+                onPressed: () {
+                  setState(() {
+                    tool = Tool.fill;
+                  });
+                }),
+          ])),
+          Expanded(
+              child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+            if (sprites[selected].frameType == FrameTypes.expression)
+              IconButton(
+                tooltip: 'Toggle Background Preview',
+                icon: backgroundVisible
+                    ? const Icon(Icons.image_rounded)
+                    : const Icon(Icons.image_not_supported_rounded),
+                onPressed: () {
+                  setState(() {
+                    backgroundVisible = !backgroundVisible;
+                  });
+                },
+              ),
+            IconButton(
+              tooltip: 'Toggle grid',
+              isSelected: showGrid,
+              icon: showGrid
+                  ? const Icon(Icons.grid_on_rounded)
+                  : const Icon(Icons.grid_off_rounded),
+              onPressed: () {
+                setState(() {
+                  showGrid = !showGrid;
+                });
+              },
+            ),
+            IconButton(
+              tooltip: 'Color picker',
+              icon: const Icon(Icons.color_lens_rounded),
+              onPressed: () {
+                showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text("Select a color!"),
+                        content: SingleChildScrollView(
+                          child: ColorPicker(
+                            portraitOnly: true,
+                            pickerAreaHeightPercent: 0.5,
+                            labelTypes: const [ColorLabelType.rgb],
+                            enableAlpha: true,
+                            pickerColor: colorSet.value,
+                            onColorChanged: (color) {
+                              setState(() {
+                                colorSet.value = color;
+                              });
+                            },
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("Close"),
+                          ),
+                        ],
+                      );
+                    });
+              },
+            ),
+            IconButton(
+              tooltip: 'Color picker',
+              isSelected: tool == Tool.pick,
+              icon: const Icon(Icons.colorize_rounded),
+              onPressed: () {
+                setState(() {
+                  tool = Tool.pick;
+                });
+              },
+            ),
+            IconButton(
+              tooltip: 'Toggle background color',
+              icon: const Icon(Icons.format_paint_rounded),
+              onPressed: () {
+                // toggle background color
+                setState(() {
+                  if (_backgroundColor == Colors.grey) {
+                    // if brightness is bright, use white.
+                    _backgroundColor = Colors.transparent;
+                  } else {
+                    _backgroundColor = Colors.grey;
+                  }
+                });
+              },
+            ),
+          ]))
         ],
       ),
     );
@@ -575,25 +583,6 @@ class PainterWidget extends CustomPainter {
         }
       }
     }
-    // draw grid
-    if (grid) {
-      Paint paint = Paint();
-      paint.color = Colors.black;
-      paint.style = PaintingStyle.stroke;
-      for (int i = 0; i < pixels.length; i++) {
-        for (int j = 0; j < pixels[i].length; j++) {
-          paint.strokeWidth = .05;
-          canvas.drawRect(
-            Rect.fromLTWH(
-                j * size.width / pixels[j].length,
-                i * size.height / pixels.length,
-                size.width / pixels[j].length,
-                size.height / pixels.length),
-            paint,
-          );
-        }
-      }
-    }
     // draw background if it exists
     if (background != null && backgroundVisible) {
       debugPrint('has background');
@@ -644,6 +633,25 @@ class PainterWidget extends CustomPainter {
         );
 
         j = end;
+      }
+    }
+    // draw grid
+    if (grid) {
+      Paint paint = Paint();
+      paint.color = Colors.black;
+      paint.style = PaintingStyle.stroke;
+      for (int i = 0; i < pixels.length; i++) {
+        for (int j = 0; j < pixels[i].length; j++) {
+          paint.strokeWidth = .05;
+          canvas.drawRect(
+            Rect.fromLTWH(
+                j * size.width / pixels[j].length,
+                i * size.height / pixels.length,
+                size.width / pixels[j].length,
+                size.height / pixels.length),
+            paint,
+          );
+        }
       }
     }
   }

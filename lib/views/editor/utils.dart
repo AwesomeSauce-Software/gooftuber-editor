@@ -1,5 +1,7 @@
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:gooftuber_editor/main.dart';
+import 'package:gooftuber_editor/tools/jsonexport.dart';
+import 'package:gooftuber_editor/views/editor.dart';
 import 'package:gooftuber_editor/views/painter.dart' as painter;
 
 Future<void> handleFileDrop(DropDoneDetails details, void Function(void Function()) setState) async {
@@ -45,6 +47,10 @@ Future<void> handleFileDrop(DropDoneDetails details, void Function(void Function
         undoRedo.value = 0;
       }
       updater.value = toUpdate;
+      // check if last save was more than 5 mins ago and autoSave enabled
+      if (autoSave.value && (DateTime.now().millisecondsSinceEpoch - lastSaved) > 300000) {
+        saveProject();
+      }
       refresh();
     });
   }

@@ -127,6 +127,20 @@ final prefs = await SharedPreferences.getInstance();
   return ;
 }
 
+Future<void> loadSettings() async {
+  final prefs = await SharedPreferences.getInstance();
+  autoSave.value = prefs.getBool("autoSave") ?? false;
+  appTheme.value = prefs.getInt("theme") ?? 2;
+  return;
+}
+
+Future<void> saveSettings() async {
+  final prefs = await SharedPreferences.getInstance();
+  prefs.setBool("autoSave", autoSave.value);
+  prefs.setInt("theme", appTheme.value);
+  return;
+}
+
 Future<void> saveProject() async {
   final prefs = await SharedPreferences.getInstance();
   prefs.setString("project", exportJson(sprites));

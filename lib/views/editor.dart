@@ -11,6 +11,7 @@ import 'package:gooftuber_editor/views/editor/utils.dart';
 import 'package:gooftuber_editor/views/painter.dart' as painter;
 import 'package:gooftuber_editor/tools/jsonexport.dart';
 import 'package:gooftuber_editor/tools/sprite_tools.dart';
+import 'package:gooftuber_editor/views/settings.dart';
 import 'package:gooftuber_editor/views/view_sprites.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -34,11 +35,11 @@ class _EditorPageState extends State<Editor>
       if (event.isControlPressed &&
           event.isKeyPressed(LogicalKeyboardKey.keyZ)) {
         undo(currentPage);
-        undoRedo.value++;
+        undoRedo.value = ++undoRedo.value;
       } else if (event.isControlPressed &&
           event.isKeyPressed(LogicalKeyboardKey.keyY)) {
         redo(currentPage);
-        undoRedo.value++;
+        undoRedo.value = ++undoRedo.value;
       } else if (event.isControlPressed &&
           event.isKeyPressed(LogicalKeyboardKey.keyE)) {
         // save
@@ -92,6 +93,18 @@ class _EditorPageState extends State<Editor>
 
   var currentPage = Pages.editor;
 
+  int getNavRailIndex() {
+    switch (currentPage) {
+      case Pages.editor:
+      case Pages.view:
+        return currentPage.index;
+      case Pages.settings:
+        return 4;
+      default:
+        return 0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,13 +140,16 @@ class _EditorPageState extends State<Editor>
                         icon: Icon(Icons.save_alt_rounded),
                         label: Text('Export'),
                       ),
+                      const NavigationRailDestination(
+                          icon: Icon(Icons.settings_rounded),
+                          label: Text('Settings')),
                       if (apiUp.data ?? false)
                         const NavigationRailDestination(
                           icon: Icon(Icons.cloud_upload_rounded),
                           label: Text('Sync'),
                         ),
                     ],
-                    selectedIndex: currentPage.index,
+                    selectedIndex: getNavRailIndex(),
                     useIndicator: true,
                     onDestinationSelected: (int index) async {
                       if (index == 0) {
@@ -156,6 +172,11 @@ class _EditorPageState extends State<Editor>
                         String json = exportJson(sprites);
                         exportFile(context, json);
                       } else if (index == 4) {
+                        // settings
+                        setState(() {
+                          currentPage = Pages.settings;
+                        });
+                      } else if (index == 5) {
                         showCodeDialog(context).then((value) async {
                           if (value != null) {
                             var result =
@@ -190,9 +211,14 @@ class _EditorPageState extends State<Editor>
                         spriteSelected = 0;
                       }
                       // build pixel art editor
-                      return const painter.Painter();
+                      return ValueListenableBuilder(
+                          valueListenable: undoRedo,
+                          builder: (context, _, __) {
+                            return const painter.Painter();
+                          });
                     })),
           if (currentPage == Pages.view) const Expanded(child: SpritePreview()),
+          if (currentPage == Pages.settings) const Expanded(child: SettingsView()),
           if (picturesVisible && currentPage == Pages.editor)
             const VerticalDivider(width: 1),
           if (picturesVisible && currentPage == Pages.editor) drawer(context)
@@ -255,6 +281,8 @@ class _EditorPageState extends State<Editor>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              if (currentPage == Pages.editor && autoSave.value)
+              const Tooltip(message: 'Auto save is enabled', child: Icon(Icons.autorenew_rounded, color: Colors.green,)),
               if (currentPage == Pages.editor)
                 ValueListenableBuilder(
                     valueListenable: updater,
@@ -279,7 +307,7 @@ class _EditorPageState extends State<Editor>
               FutureBuilder(
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
-                    if (!snapshot.data!) {
+                    if (snapshot.data == ClientState.upToDate) {
                       return IconButton(
                         tooltip: 'You are up to date!',
                         icon: const Icon(Icons.check_rounded),
@@ -291,20 +319,26 @@ class _EditorPageState extends State<Editor>
                                   onPressed: () {
                                     showAboutDialog(
                                         context: context,
-                                        applicationIcon:
-                                            Image.asset('assets/icon.png',
-                                                width: 48, height: 48),
-                                        applicationName: 'Avatar Maker',
+                                        applicationIcon: Image.asset(
+                                            'assets/icon.png',
+                                            width: 48,
+                                            height: 48),
+                                        applicationName:
+                                            'Gooftuber Avatar Maker',
                                         applicationVersion: currentTag,
                                         children: [
-                                          const Text('Made by AwesomeSauce Software', textAlign: TextAlign.center),
+                                          const Text(
+                                              'Made by AwesomeSauce Software',
+                                              textAlign: TextAlign.center),
                                           const SizedBox(height: 20),
                                           Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               IconButton(
                                                   tooltip: 'Changelog',
                                                   onPressed: () {
+                                                    Navigator.pop(context);
                                                     showChangelogDialog(
                                                         context);
                                                   },
@@ -323,18 +357,15 @@ class _EditorPageState extends State<Editor>
                                   }));
                         },
                       );
-                    } else {
+                    } else if (snapshot.data == ClientState.outOfDate) {
                       return IconButton(
-                        tooltip: '',
+                        tooltip: 'Update available!',
                         icon: const Icon(Icons.update_rounded),
                         onPressed: () {
                           showUpdateDialog(context);
                         },
                       );
-                    }
-                  } else {
-                    // spinning loading icon
-                    if (snapshot.hasError) {
+                    } else if (snapshot.data == ClientState.error) {
                       return IconButton(
                         tooltip: 'Error!',
                         icon: const Icon(Icons.warning_rounded),
@@ -343,7 +374,14 @@ class _EditorPageState extends State<Editor>
                               color: Colors.redAccent);
                         },
                       );
+                    } else {
+                      return const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(),
+                      );
                     }
+                  } else {
                     return const SizedBox(
                       width: 18,
                       height: 18,
