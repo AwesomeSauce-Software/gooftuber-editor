@@ -44,7 +44,7 @@ Future<String> getChangelog(String tag) async {
       Map<String, dynamic> gitTag = gitTagFromJson(response.body);
       var message = gitTag["message"];
       if (message.replaceAll("\n", "").replaceAll("\r", "") != "") {
-        return message;
+        return message.replaceAll("\\n", "\n");
       } else {
         return "No changelog for this version";
       }

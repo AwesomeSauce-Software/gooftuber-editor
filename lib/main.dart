@@ -6,7 +6,7 @@ import 'package:gooftuber_editor/views/painter.dart' as painter;
 import 'package:gooftuber_editor/tools/platformtools.dart';
 import 'package:window_manager/window_manager.dart';
 
-String currentTag = "v1.0.3";
+String currentTag = "v1.0.4";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

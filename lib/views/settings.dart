@@ -27,57 +27,94 @@ class SettingAction {
 
 class _SettingsViewState extends State<SettingsView> {
   Widget settingsGroup(String title, List<Widget> children) {
-    return Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
-            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+    var expanded = false;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Card(
+          child: Column(
+            children: [
+              ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.all(8),
+                title:
+                    Text(title, style: Theme.of(context).textTheme.titleMedium),
+                trailing:
+                    Icon(expanded ? Icons.expand_less : Icons.expand_more),
+                onTap: () {
+                  setState(() {
+                    expanded = !expanded;
+                  });
+                },
+              ),
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 200),
+                firstChild: Container(),
+                secondChild: Column(
+                  children: [
+                    const Divider(),
+                    ...children,
+                    const SizedBox(height: 8),
+                  ],
+                ), // Shown when expanded
+                crossFadeState: expanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+              ),
+            ],
           ),
-          const Divider(),
-          ...children,
-          const SizedBox(height: 8)
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget settingsTile(Setting setting) {
-    return (setting.items != null)? PopupMenuButton(
-      tooltip: '',
-      child: ListTile(
-        title: Text(setting.title),
-        subtitle: Text(setting.subtitle),
-        trailing: setting.trailing,
-      ),
-      itemBuilder: (context) {
-        return [
-          for (var i = 0; i < setting.items!.length; i++)
-            PopupMenuItem(
-              value: i,
-              child: Text(setting.items![i].title),
-            )
-        ];
-      },
-      onSelected: (value) {
-        setting.items![value].action();
-      },
-    ) : ListTile(
-      title: Text(setting.title),
-      subtitle: Text(setting.subtitle),
-      trailing: setting.trailing,
-    );
+    return (setting.items != null)
+        ? PopupMenuButton(
+            tooltip: '',
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              title: Text(setting.title),
+              subtitle: Text(setting.subtitle),
+              trailing: setting.trailing,
+            ),
+            itemBuilder: (context) {
+              return [
+                for (var i = 0; i < setting.items!.length; i++)
+                  PopupMenuItem(
+                    value: i,
+                    child: Text(setting.items![i].title),
+                  )
+              ];
+            },
+            onSelected: (value) {
+              setting.items![value].action();
+            },
+          )
+        : ListTile(
+            title: Text(setting.title),
+            subtitle: Text(setting.subtitle),
+            trailing: setting.trailing,
+          );
   }
 
   Widget settingsTileTap(Setting setting) {
     return ListTile(
+      shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
       title: Text(setting.title),
       subtitle: Text(setting.subtitle),
       trailing: setting.trailing,
-      onTap: (setting.items?.length == 1)? () {
-        setting.items![0].action();
-      } : null,
+      onTap: (setting.items?.length == 1)
+          ? () {
+              setting.items![0].action();
+            }
+          : null,
     );
   }
 
@@ -94,6 +131,24 @@ class _SettingsViewState extends State<SettingsView> {
           constraints: const BoxConstraints(maxWidth: 700),
           child: ListView(
             children: [
+              settingsGroup("General", [
+                ValueListenableBuilder(
+                    valueListenable: appTheme,
+                    builder: (context, theme, _) {
+                      return settingsTile(Setting(
+                        "Theme",
+                        themes[theme],
+                        const Icon(Icons.brightness_4_rounded),
+                        items: [
+                          for (var i = 0; i < themes.length; i++)
+                            SettingAction(themes[i], () async {
+                              appTheme.value = i;
+                              await saveSettings();
+                            })
+                        ],
+                      ));
+                    }),
+              ]),
               settingsGroup("Global Settings", [
                 ValueListenableBuilder(
                     valueListenable: autoSave,
@@ -117,35 +172,16 @@ class _SettingsViewState extends State<SettingsView> {
                       ));
                     }),
               ]),
-              settingsGroup("General", [
-                ValueListenableBuilder(
-                    valueListenable: appTheme,
-                    builder: (context, theme, _) {
-                      return settingsTile(Setting(
-                        "Theme",
-                        themes[theme],
-                        const Icon(Icons.brightness_4_rounded),
-                        items: [
-                          for (var i = 0; i < themes.length; i++)
-                            SettingAction(themes[i], () async {
-                              appTheme.value = i;
-                              await saveSettings();
-                            })
-                        ],
-                      ));
-                    }),
-              ]),
               settingsGroup("About this App", [
                 settingsTileTap(Setting(
-                  "Gooftuber Avatar Editor",
-                  "An App, made with love, by AwesomeSauce Software",
-                  const SizedBox(),
-                  items: [
-                    SettingAction("Show About", () async {
-                      aboutDialog(context);
-                    }),
-                  ]
-                )),
+                    "Gooftuber Avatar Editor",
+                    "An App, made with lotsa, by AwesomeSauce Software",
+                    const SizedBox(),
+                    items: [
+                      SettingAction("Show About", () async {
+                        aboutDialog(context);
+                      }),
+                    ])),
                 settingsTileTap(Setting(
                   "Version $currentTag",
                   "Click to check for updates",
@@ -154,17 +190,19 @@ class _SettingsViewState extends State<SettingsView> {
                     SettingAction("Check for Updates", () async {
                       var state = await isClientOutOfDate();
                       if (context.mounted) {
-                        switch(state) {
-                        case ClientState.upToDate:
-                          showSnackbar(context, "You are up to date!");
-                          break;
-                        case ClientState.outOfDate:
-                          showUpdateDialog(context);
-                          break;
-                        case ClientState.error:
-                          showSnackbar(context, "An error occured while checking for updates.", color: Colors.red);
-                          break;
-                      }
+                        switch (state) {
+                          case ClientState.upToDate:
+                            showSnackbar(context, "You are up to date!");
+                            break;
+                          case ClientState.outOfDate:
+                            showUpdateDialog(context);
+                            break;
+                          case ClientState.error:
+                            showSnackbar(context,
+                                "An error occured while checking for updates.",
+                                color: Colors.red);
+                            break;
+                        }
                       }
                     })
                   ],

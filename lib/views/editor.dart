@@ -91,6 +91,7 @@ class _EditorPageState extends State<Editor>
   var previewsVisible = true;
 
   var currentPage = Pages.editor;
+  var oldIndex = 0;
 
   int getNavRailIndex() {
     switch (currentPage) {
@@ -102,6 +103,52 @@ class _EditorPageState extends State<Editor>
       default:
         return 0;
     }
+  }
+
+  Widget getPage() {
+    if (currentPage == Pages.editor) {
+      return Container(
+        key: const Key('editor'),
+        color: Theme.of(context).colorScheme.surface,
+        child: Row(
+          children: [
+            Expanded(
+                child: ValueListenableBuilder(
+                    valueListenable: imageSelected,
+                    builder: (context, spriteSelected, _) {
+                      if (sprites.isEmpty) {
+                        return const Center(
+                          child: Text('No images found'),
+                        );
+                      }
+                      if (spriteSelected < 0) {
+                        spriteSelected = 0;
+                      }
+                      // build pixel art editor
+                      return ValueListenableBuilder(
+                          valueListenable: undoRedo,
+                          builder: (context, _, __) {
+                            return const painter.Painter();
+                          });
+                    })),
+            if (picturesVisible && currentPage == Pages.editor)
+              const VerticalDivider(width: 1),
+            if (picturesVisible && currentPage == Pages.editor) drawer(context)
+          ],
+        ),
+      );
+    } else if (currentPage == Pages.view) {
+      return Container(
+          key: const Key('view'),
+          color: Theme.of(context).colorScheme.surface,
+          child: const SpritePreview());
+    } else if (currentPage == Pages.settings) {
+      return Container(
+          key: const Key('settings'),
+          color: Theme.of(context).colorScheme.surface,
+          child: const SettingsView());
+    }
+    return const Expanded(child: Text('Error'));
   }
 
   @override
@@ -196,31 +243,16 @@ class _EditorPageState extends State<Editor>
                   );
                 }),
           if (navRailVisible) const VerticalDivider(width: 1),
-          if (currentPage == Pages.editor)
-            Expanded(
-                child: ValueListenableBuilder(
-                    valueListenable: imageSelected,
-                    builder: (context, spriteSelected, _) {
-                      if (sprites.isEmpty) {
-                        return const Center(
-                          child: Text('No images found'),
-                        );
-                      }
-                      if (spriteSelected < 0) {
-                        spriteSelected = 0;
-                      }
-                      // build pixel art editor
-                      return ValueListenableBuilder(
-                          valueListenable: undoRedo,
-                          builder: (context, _, __) {
-                            return const painter.Painter();
-                          });
-                    })),
-          if (currentPage == Pages.view) const Expanded(child: SpritePreview()),
-          if (currentPage == Pages.settings) const Expanded(child: SettingsView()),
-          if (picturesVisible && currentPage == Pages.editor)
-            const VerticalDivider(width: 1),
-          if (picturesVisible && currentPage == Pages.editor) drawer(context)
+          Expanded(
+              child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    );
+                  },
+                  child: getPage())),
         ],
       )),
     );
@@ -281,7 +313,12 @@ class _EditorPageState extends State<Editor>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (currentPage == Pages.editor && autoSave.value)
-              const Tooltip(message: 'Auto save is enabled', child: Icon(Icons.autorenew_rounded, color: Colors.green,)),
+                const Tooltip(
+                    message: 'Auto save is enabled',
+                    child: Icon(
+                      Icons.autorenew_rounded,
+                      color: Colors.green,
+                    )),
               if (currentPage == Pages.editor)
                 ValueListenableBuilder(
                     valueListenable: updater,
