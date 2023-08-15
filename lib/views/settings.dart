@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gooftuber_editor/main.dart';
+import 'package:gooftuber_editor/tools/apitools.dart';
 import 'package:gooftuber_editor/tools/jsonexport.dart';
+import 'package:gooftuber_editor/views/dialogs.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -35,6 +37,7 @@ class _SettingsViewState extends State<SettingsView> {
           ),
           const Divider(),
           ...children,
+          const SizedBox(height: 8)
         ],
       ),
     );
@@ -64,6 +67,17 @@ class _SettingsViewState extends State<SettingsView> {
       title: Text(setting.title),
       subtitle: Text(setting.subtitle),
       trailing: setting.trailing,
+    );
+  }
+
+  Widget settingsTileTap(Setting setting) {
+    return ListTile(
+      title: Text(setting.title),
+      subtitle: Text(setting.subtitle),
+      trailing: setting.trailing,
+      onTap: (setting.items?.length == 1)? () {
+        setting.items![0].action();
+      } : null,
     );
   }
 
@@ -120,6 +134,41 @@ class _SettingsViewState extends State<SettingsView> {
                         ],
                       ));
                     }),
+              ]),
+              settingsGroup("About this App", [
+                settingsTileTap(Setting(
+                  "Gooftuber Avatar Editor",
+                  "An App, made with love, by AwesomeSauce Software",
+                  const SizedBox(),
+                  items: [
+                    SettingAction("Show About", () async {
+                      aboutDialog(context);
+                    }),
+                  ]
+                )),
+                settingsTileTap(Setting(
+                  "Version $currentTag",
+                  "Click to check for updates",
+                  const SizedBox(),
+                  items: [
+                    SettingAction("Check for Updates", () async {
+                      var state = await isClientOutOfDate();
+                      if (context.mounted) {
+                        switch(state) {
+                        case ClientState.upToDate:
+                          showSnackbar(context, "You are up to date!");
+                          break;
+                        case ClientState.outOfDate:
+                          showUpdateDialog(context);
+                          break;
+                        case ClientState.error:
+                          showSnackbar(context, "An error occured while checking for updates.", color: Colors.red);
+                          break;
+                      }
+                      }
+                    })
+                  ],
+                ))
               ])
             ],
           ),

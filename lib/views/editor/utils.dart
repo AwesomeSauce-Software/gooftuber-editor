@@ -1,7 +1,6 @@
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:gooftuber_editor/main.dart';
 import 'package:gooftuber_editor/tools/jsonexport.dart';
-import 'package:gooftuber_editor/views/editor.dart';
 import 'package:gooftuber_editor/views/painter.dart' as painter;
 
 Future<void> handleFileDrop(DropDoneDetails details, void Function(void Function()) setState) async {

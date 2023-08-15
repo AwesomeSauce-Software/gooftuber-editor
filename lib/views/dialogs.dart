@@ -6,6 +6,46 @@ import 'package:gooftuber_editor/tools/webtools.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+void aboutDialog(BuildContext context) {
+    return showAboutDialog(
+                                      context: context,
+                                      applicationIcon: Image.asset(
+                                          'assets/icon.png',
+                                          width: 48,
+                                          height: 48),
+                                      applicationName:
+                                          'Gooftuber Avatar Maker',
+                                      applicationVersion: currentTag,
+                                      children: [
+                                        const Text(
+                                            'Made by AwesomeSauce Software',
+                                            textAlign: TextAlign.center),
+                                        const SizedBox(height: 20),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            IconButton(
+                                                tooltip: 'Changelog',
+                                                onPressed: () {
+                                                  Navigator.pop(context);
+                                                  showChangelogDialog(
+                                                      context);
+                                                },
+                                                icon: const Icon(Icons
+                                                    .speaker_notes_rounded)),
+                                            IconButton(
+                                                tooltip: 'Source',
+                                                onPressed: () => launchUrl(
+                                                    Uri.parse(
+                                                        "https://github.com/AwesomeSauce-Software/gooftuber-editor")),
+                                                icon: const Icon(
+                                                    Icons.code_rounded)),
+                                          ],
+                                        )
+                                      ]);
+  }
+
 void showSnackbar(context, String text, {Color? color, SnackBarAction? action}) {
   double width = MediaQuery.of(context).size.width;
   if (width < 400) {

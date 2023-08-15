@@ -13,7 +13,6 @@ import 'package:gooftuber_editor/tools/jsonexport.dart';
 import 'package:gooftuber_editor/tools/sprite_tools.dart';
 import 'package:gooftuber_editor/views/settings.dart';
 import 'package:gooftuber_editor/views/view_sprites.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class Editor extends StatefulWidget {
   const Editor({super.key, required this.title});
@@ -317,43 +316,7 @@ class _EditorPageState extends State<Editor>
                               action: SnackBarAction(
                                   label: "About",
                                   onPressed: () {
-                                    showAboutDialog(
-                                        context: context,
-                                        applicationIcon: Image.asset(
-                                            'assets/icon.png',
-                                            width: 48,
-                                            height: 48),
-                                        applicationName:
-                                            'Gooftuber Avatar Maker',
-                                        applicationVersion: currentTag,
-                                        children: [
-                                          const Text(
-                                              'Made by AwesomeSauce Software',
-                                              textAlign: TextAlign.center),
-                                          const SizedBox(height: 20),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              IconButton(
-                                                  tooltip: 'Changelog',
-                                                  onPressed: () {
-                                                    Navigator.pop(context);
-                                                    showChangelogDialog(
-                                                        context);
-                                                  },
-                                                  icon: const Icon(Icons
-                                                      .speaker_notes_rounded)),
-                                              IconButton(
-                                                  tooltip: 'Source',
-                                                  onPressed: () => launchUrl(
-                                                      Uri.parse(
-                                                          "https://github.com/AwesomeSauce-Software/gooftuber-editor")),
-                                                  icon: const Icon(
-                                                      Icons.code_rounded)),
-                                            ],
-                                          )
-                                        ]);
+                                    aboutDialog(context);
                                   }));
                         },
                       );
