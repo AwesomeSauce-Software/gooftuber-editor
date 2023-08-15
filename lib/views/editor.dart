@@ -25,6 +25,8 @@ class Editor extends StatefulWidget {
 var navRailVisible = true;
 var picturesVisible = true;
 
+ValueNotifier<bool> previewsVisible = ValueNotifier(true);
+
 class _EditorPageState extends State<Editor>
     with SingleTickerProviderStateMixin {
   void setupKeyboardShortcuts() {
@@ -87,8 +89,6 @@ class _EditorPageState extends State<Editor>
 
   var nameController = TextEditingController();
   var wxhController = TextEditingController();
-
-  var previewsVisible = true;
 
   var currentPage = Pages.editor;
   var oldIndex = 0;
@@ -344,19 +344,7 @@ class _EditorPageState extends State<Editor>
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
                     if (snapshot.data == ClientState.upToDate) {
-                      return IconButton(
-                        tooltip: 'You are up to date!',
-                        icon: const Icon(Icons.check_rounded),
-                        onPressed: () {
-                          showSnackbar(
-                              context, 'You are up to date on $currentTag!',
-                              action: SnackBarAction(
-                                  label: "About",
-                                  onPressed: () {
-                                    aboutDialog(context);
-                                  }));
-                        },
-                      );
+                      return const SizedBox.shrink();
                     } else if (snapshot.data == ClientState.outOfDate) {
                       return IconButton(
                         tooltip: 'Update available!',
@@ -415,35 +403,6 @@ class _EditorPageState extends State<Editor>
                   tooltip: 'Save Project',
                   icon: const Icon(Icons.save_rounded),
                   onPressed: isEnabled() ? () => saveProject() : null),
-              IconButton(
-                tooltip: 'Toggle Theme',
-                icon: appTheme.value != 2
-                    ? appTheme.value == 0
-                        ? const Icon(Icons.dark_mode_rounded)
-                        : const Icon(Icons.light_mode_rounded)
-                    : const Icon(Icons.auto_awesome_rounded),
-                onPressed: () {
-                  setState(() {
-                    int value = appTheme.value + 1;
-                    if (value > 2) {
-                      value = 0;
-                    }
-                    appTheme.value = value;
-                  });
-                },
-              ),
-              if (currentPage == Pages.editor)
-                IconButton(
-                  tooltip: 'Toggle Previews',
-                  icon: previewsVisible
-                      ? const Icon(Icons.visibility_rounded)
-                      : const Icon(Icons.visibility_off_rounded),
-                  onPressed: () {
-                    setState(() {
-                      previewsVisible = !previewsVisible;
-                    });
-                  },
-                ),
               if (currentPage == Pages.editor)
                 IconButton(
                   tooltip: 'Toggle Frames',
@@ -633,7 +592,7 @@ class _EditorPageState extends State<Editor>
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               color: colors[i],
-                              border: (painter.colorSet == colors[i])
+                              border: (painter.colorSet.value == colors[i])
                                   ? Border.all(
                                       strokeAlign:
                                           BorderSide.strokeAlignOutside,
@@ -740,7 +699,7 @@ class _EditorPageState extends State<Editor>
                               ? 'Talking frame'
                               : 'Non-talking frame'),
                 ),
-                if (previewsVisible && !isImageEmpty(sprites[i]))
+                if (previewsVisible.value && !isImageEmpty(sprites[i]))
                   SizedBox(
                       width: 128,
                       height: 128,
