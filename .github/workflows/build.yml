@@ -100,6 +100,20 @@ jobs:
             build/linux/x64/release/bundle/gooftuber-editor_${{github.ref_name}}_amd64.deb
             build/linux/x64/release/bundle/gooftuber-editor-${{github.ref_name}}.x86_64.rpm
 
+  build-and-release-web:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - name: executing remote ssh commands using password
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE }}
+        script: |
+          cd
+          ./update-editor.sh
+
   build-and-release-windows:
     runs-on: windows-latest
     needs: test
