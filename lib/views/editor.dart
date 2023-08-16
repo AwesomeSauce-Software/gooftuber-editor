@@ -537,7 +537,6 @@ class _EditorPageState extends State<Editor>
               ListTile(
                 title: Text(colorPalettes[i].name),
                 subtitle: previewsVisible.value? SizedBox(
-                    // height: 40,
                     child: Row(
                       children: [
                         Image.memory(Uint8List.fromList(colorPalettes[i].saveAsPng()),
@@ -682,7 +681,7 @@ class _EditorPageState extends State<Editor>
   Widget framesDrawer(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Frames and Color"),
+        title: const Text("Frames"),
         centerTitle: false,
         actions: [
           IconButton(

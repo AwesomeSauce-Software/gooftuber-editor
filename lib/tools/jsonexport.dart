@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:gooftuber_editor/views/painter.dart' as painter;
@@ -10,18 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../views/dialogs.dart';
 import '../main.dart';
-
-/* 
-JSON FORMAT:
-{
-    "avatars": [
-        {
-            "filename": "",
-            "base64": ""
-        }
-    ]
-}
-*/
 
 String exportJson(List<painter.Image> images) {
   List<Map<String, String>> avatars = [];
@@ -101,6 +90,26 @@ Future<void> importPalettePng(context, Uint8List bytes, name) async {
   saveColorPalettes();
 }
 
+Future<void> handleImportPaletteDrop(context, DropDoneDetails details,
+    void Function(void Function()) setState) async {
+  for (var file in details.files) {
+    if (!file.name.endsWith('.png') || !file.name.endsWith('.json')) {
+      continue;
+    }
+
+    var bytes = await file.readAsBytes();
+
+    if (file.name.endsWith('.png')) {
+      importPalettePng(context, bytes, file.name.replaceAll('.png', ''));
+    } else if (file.name.endsWith('.json')) {
+      var text = utf8.decode(bytes);
+      var palette = painter.ColorPalette.fromJson(jsonDecode(text));
+      colorPalettes.add(palette);
+      saveColorPalettes();
+    }
+  }
+}
+
 Future<void> importPalette(context) async {
   FilePickerResult? result = await FilePicker.platform
       .pickFiles(type: FileType.custom, allowedExtensions: ['json', 'png']);
@@ -110,11 +119,13 @@ Future<void> importPalette(context) async {
 
   if (result.files.single.extension == 'png') {
     if (isPlatformWeb()) {
-      return importPalettePng(context, result.files.single.bytes!, result.files.single.name.replaceAll('.png', ''));
+      return importPalettePng(context, result.files.single.bytes!,
+          result.files.single.name.replaceAll('.png', ''));
     } else {
       File file = File(result.files.single.path!);
       file.readAsBytes().then((bytes) {
-        importPalettePng(context, bytes, result.files.single.name.replaceAll('.png', ''));
+        importPalettePng(
+            context, bytes, result.files.single.name.replaceAll('.png', ''));
       });
     }
 
@@ -151,6 +162,23 @@ Future<void> exportString(BuildContext context, String json, String filename,
     return;
   } else {
     List<int> bytes = utf8.encode(json);
+    await File(outputFile).writeAsBytes(bytes);
+  }
+}
+
+Future<void> exportBytes(BuildContext? context, Uint8List bytes,
+    String filename, List<String> filetypes) async {
+  // save as dialog
+  if (isPlatformWeb()) {
+    saveFileOnWeb(bytes, filename);
+    return;
+  }
+
+  String? outputFile = await FilePicker.platform.saveFile(
+      dialogTitle: 'Save as', allowedExtensions: filetypes, fileName: filename);
+  if (outputFile == null) {
+    return;
+  } else {
     await File(outputFile).writeAsBytes(bytes);
   }
 }

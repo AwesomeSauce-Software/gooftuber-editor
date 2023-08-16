@@ -5,6 +5,7 @@ import 'package:gooftuber_editor/tools/jsonexport.dart';
 import 'package:gooftuber_editor/views/dialogs.dart';
 import 'package:gooftuber_editor/views/editor.dart';
 import 'package:gooftuber_editor/views/palette.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -235,15 +236,16 @@ class _SettingsViewState extends State<SettingsView> {
                                 leading: const Icon(Icons.preview_rounded)));
                           }),
                       settingsTileTap(Setting(
-                          "Paletes",
-                          "Edit, add or Export your Colorpalettes for the Editor",
+                          "Palettes",
+                          "Edit, add or Export your Color-Palettes for the Editor",
                           const Icon(Icons.chevron_right_rounded),
                           items: [
                             SettingAction("Edit", () async {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (context) => const PaletteEditor()),
+                                    builder: (context) =>
+                                        const PaletteEditor()),
                               );
                             }),
                           ],
@@ -257,16 +259,28 @@ class _SettingsViewState extends State<SettingsView> {
                     settingsTileTap(Setting(
                         "Gooftuber Avatar Editor",
                         "An App, made with lotsa, by AwesomeSauce Software",
-                        const SizedBox(),
+                        const Icon(Icons.chevron_right_rounded),
                         items: [
                           SettingAction("Show About", () async {
                             aboutDialog(context);
                           }),
-                        ])),
+                        ],
+                        leading: const Icon(Icons.info_rounded))),
+                    settingsTileTap(Setting(
+                        "Need Help?",
+                        "Click here to open the Documentation",
+                        const Icon(Icons.open_in_browser_rounded),
+                        items: [
+                          SettingAction("Show Documentation", () async {
+                            launchUrl(Uri.parse(
+                                'https://docs.awesomesauce.software/gooftuber/editor/main.html'));
+                          }),
+                        ],
+                        leading: const Icon(Icons.help_rounded))),
                     settingsTileTap(Setting(
                       "Version $currentTag",
                       "Click to check for updates",
-                      const SizedBox(),
+                      const Icon(Icons.chevron_right_rounded),
                       items: [
                         SettingAction("Check for Updates", () async {
                           var state = await isClientOutOfDate();
@@ -287,6 +301,7 @@ class _SettingsViewState extends State<SettingsView> {
                           }
                         })
                       ],
+                      leading: const Icon(Icons.update_rounded),
                     ))
                   ],
                   1)

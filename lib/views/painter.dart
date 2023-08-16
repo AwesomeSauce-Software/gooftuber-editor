@@ -45,17 +45,23 @@ class ColorPalette {
     return {'name': name, 'colors': colorValues};
   }
 
-  List<int> saveAsPng() {
+  List<int> saveAsPng({int scale = 18}) {
+    // if empty, return empty png
+    if (colors.isEmpty) {
+      var png = img.Image(width: 1, height: 1, numChannels: 4);
+      png.setPixelRgba(0, 0, 0, 0, 0, 0);
+      return img.encodePng(png);
+    }
     // max 128 width, height is calculated
-    int width = min(colors.length, 128) * 18;
-    int height = (colors.length / 128).ceil() * 18;
+    int width = min(colors.length, 128) * scale;
+    int height = (colors.length / 128).ceil() * scale;
     var png = img.Image(width: width, height: height, numChannels: 4);
 
     for (int i = 0; i < colors.length; i++) {
-      int x = (i % 128) * 18;
-      int y = (i / 128).floor() * 18;
-      for (int j = 0; j < 18; j++) {
-        for (int k = 0; k < 18; k++) {
+      int x = (i % 128) * scale;
+      int y = (i / 128).floor() * scale;
+      for (int j = 0; j < scale; j++) {
+        for (int k = 0; k < scale; k++) {
           png.setPixelRgba(x + k, y + j, colors[i].red, colors[i].green,
               colors[i].blue, colors[i].alpha);
         }

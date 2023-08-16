@@ -5,9 +5,26 @@ on:
       - master
 jobs:
 
+  test:
+    runs-on: ubuntu-latest
+
+    permissions:
+        contents: read
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: subosito/flutter-action@v1
+        with:
+          channel: 'stable'
+      - name: Install project dependencies
+        run: flutter pub get
+      - name: Run tests
+        run: flutter test
+
   build:
     name: Build
     runs-on: ubuntu-latest
+    depends-on: test
     steps:
     - name: executing remote ssh commands using password
       uses: appleboy/ssh-action@v1.0.0
