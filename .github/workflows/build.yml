@@ -76,7 +76,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         id: build-rpm
         run: |
-            rm build/linux/x64/release/bundle/gooftuber-editor-${{github.ref_name}}-linux.zip
             mkdir -p .rpmpkg/usr/bin
             mkdir -p .rpmpkg/usr/lib/app
             cp -r build/linux/x64/release/bundle/* .rpmpkg/usr/lib/app/
