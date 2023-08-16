@@ -58,7 +58,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         id: build-deb
         run: |
-            rm build/linux/x64/release/bundle/gooftuber-editor-${{github.ref_name}}-linux.zip
             mkdir -p .debpkg/usr/bin
             mkdir -p .debpkg/usr/lib/app
             cp -r build/linux/x64/release/bundle/* .debpkg/usr/lib/app/
