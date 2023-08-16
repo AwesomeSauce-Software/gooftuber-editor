@@ -63,6 +63,7 @@ jobs:
             mkdir -p .debpkg/usr/lib/app
             cp -r build/linux/x64/release/bundle/* .debpkg/usr/lib/app/
       - uses: jiro4989/build-deb-action@v3
+        if: startsWith(github.ref, 'refs/tags/')
         with:
             package: gooftuber-editor
             package_root: .debpkg
@@ -80,6 +81,7 @@ jobs:
             mkdir -p .rpmpkg/usr/lib/app
             cp -r build/linux/x64/release/bundle/* .rpmpkg/usr/lib/app/
       - uses: jiro4989/build-rpm-action@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           summary: 'Editor for Gooftuber Studio'
           package: gooftuber-editor
@@ -88,6 +90,15 @@ jobs:
           version: ${{ github.ref }} # refs/tags/v*.*.*
           arch: 'x86_64'
           desc: 'Editor for Gooftuber Studio'
+      - name: Push Packages
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            build/linux/x64/release/bundle/gooftuber-editor_${{github.ref_name}}_amd64.deb
+            build/linux/x64/release/bundle/gooftuber-editor-${{github.ref_name}}.x86_64.rpm
 
   build-and-release-windows:
     runs-on: windows-latest
