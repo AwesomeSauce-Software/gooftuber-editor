@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "pixelart" "\0"
+            VALUE "CompanyName", "software.awesomesauce" "\0"
+            VALUE "FileDescription", "gooftuber_editor" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "pixelart" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2023 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "pixelart.exe" "\0"
-            VALUE "ProductName", "pixelart" "\0"
+            VALUE "InternalName", "gooftuber_editor" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2023 AwesomeSauce Software. All rights reserved." "\0"
+            VALUE "OriginalFilename", "gooftuber_editor.exe" "\0"
+            VALUE "ProductName", "gooftuber_editor" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

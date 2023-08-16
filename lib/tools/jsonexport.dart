@@ -221,6 +221,9 @@ Future<void> loadSettings() async {
   final prefs = await SharedPreferences.getInstance();
   autoSave.value = prefs.getBool("autoSave") ?? false;
   appTheme.value = prefs.getInt("theme") ?? 2;
+  disableOnlineFeatures.value = prefs.getBool("offline") ?? false;
+  familiarityMode.value = prefs.getBool("familiarity") ?? false;
+
   if (prefs.getStringList("colorPalettes") != null) {
     List<String> jsonList = prefs.getStringList("colorPalettes")!;
     colorPalettes = jsonList
@@ -235,6 +238,8 @@ Future<void> saveSettings() async {
   final prefs = await SharedPreferences.getInstance();
   prefs.setBool("autoSave", autoSave.value);
   prefs.setInt("theme", appTheme.value);
+  prefs.setBool("offline", disableOnlineFeatures.value);
+  prefs.setBool("familiarity", familiarityMode.value);
   return;
 }
 

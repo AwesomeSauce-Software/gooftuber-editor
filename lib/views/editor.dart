@@ -113,6 +113,12 @@ class _EditorPageState extends State<Editor>
         color: Theme.of(context).colorScheme.surface,
         child: Row(
           children: [
+            if (familiarityMode.value && picturesVisible && currentPage == Pages.editor)
+              const VerticalDivider(width: 1),
+            if (familiarityMode.value &&
+                picturesVisible &&
+                currentPage == Pages.editor)
+              drawer(context),
             Expanded(
                 child: ValueListenableBuilder(
                     valueListenable: imageSelected,
@@ -132,9 +138,12 @@ class _EditorPageState extends State<Editor>
                             return const painter.Painter();
                           });
                     })),
-            if (picturesVisible && currentPage == Pages.editor)
+            if (!familiarityMode.value && picturesVisible && currentPage == Pages.editor)
               const VerticalDivider(width: 1),
-            if (picturesVisible && currentPage == Pages.editor) drawer(context)
+            if (!familiarityMode.value &&
+                picturesVisible &&
+                currentPage == Pages.editor)
+              drawer(context)
           ],
         ),
       );
@@ -160,103 +169,111 @@ class _EditorPageState extends State<Editor>
         child: bottomBar(),
       ),
       body: SafeArea(
-          child: Row(
-        children: [
-          if (navRailVisible)
-            FutureBuilder(
-                future: isApiUp(),
-                builder: (context, apiUp) {
-                  return NavigationRail(
-                    groupAlignment: 0,
-                    labelType: NavigationRailLabelType.all,
-                    // color selected chip
-                    destinations: <NavigationRailDestination>[
-                      const NavigationRailDestination(
-                        icon: Icon(Icons.edit_rounded),
-                        label: Text('Editor'),
-                      ),
-                      const NavigationRailDestination(
-                        icon: Icon(Icons.photo_album_rounded),
-                        label: Text('View'),
-                      ),
-                      const NavigationRailDestination(
-                        icon: Icon(Icons.folder_rounded),
-                        label: Text('Import'),
-                      ),
-                      const NavigationRailDestination(
-                        icon: Icon(Icons.save_alt_rounded),
-                        label: Text('Export'),
-                      ),
-                      const NavigationRailDestination(
-                          icon: Icon(Icons.settings_rounded),
-                          label: Text('Settings')),
-                      if (apiUp.data ?? false)
-                        const NavigationRailDestination(
-                          icon: Icon(Icons.cloud_upload_rounded),
-                          label: Text('Sync'),
-                        ),
-                    ],
-                    selectedIndex: getNavRailIndex(),
-                    useIndicator: true,
-                    onDestinationSelected: (int index) async {
-                      if (index == 0) {
-                        // editor
-                        setState(() {
-                          currentPage = Pages.editor;
-                        });
-                      } else if (index == 1) {
-                        // view
-                        setState(() {
-                          currentPage = Pages.view;
-                        });
-                      } else if (index == 2) {
-                        List<painter.Image> newSprites =
-                            await importFile(context);
-                        setState(() {
-                          sprites = newSprites;
-                        });
-                      } else if (index == 3) {
-                        String json = exportJson(sprites);
-                        exportFile(context, json);
-                      } else if (index == 4) {
-                        // settings
-                        setState(() {
-                          currentPage = Pages.settings;
-                        });
-                      } else if (index == 5) {
-                        showCodeDialog(context).then((value) async {
-                          if (value != null) {
-                            var result =
-                                await submitAvatar(exportJson(sprites), value);
-                            if (!result) {
-                              if (context.mounted) {
-                                showSnackbar(context, 'Upload failed');
-                              }
-                            } else {
-                              if (context.mounted) {
-                                showSnackbar(context, 'Upload successful!');
-                              }
-                            }
-                          }
-                        });
-                      }
-                    },
-                  );
-                }),
-          if (navRailVisible) const VerticalDivider(width: 1),
-          Expanded(
-              child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    );
-                  },
-                  child: getPage())),
-        ],
-      )),
+          child: ValueListenableBuilder(
+              valueListenable: familiarityMode,
+              builder: (context, familiarity, _) {
+                return Row(
+                  children: [
+                    if (!familiarity && navRailVisible) navRail(),
+                    if (!familiarity && navRailVisible)
+                      const VerticalDivider(width: 1),
+                    Expanded(
+                        child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, animation) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              );
+                            },
+                            child: getPage())),
+                    if (familiarity && navRailVisible)
+                      const VerticalDivider(width: 1),
+                    if (familiarity && navRailVisible) navRail(),
+                  ],
+                );
+              })),
     );
+  }
+
+  FutureBuilder<bool> navRail() {
+    return FutureBuilder(
+        future: isApiUp(),
+        builder: (context, apiUp) {
+          return NavigationRail(
+            groupAlignment: 0,
+            labelType: NavigationRailLabelType.all,
+            // color selected chip
+            destinations: <NavigationRailDestination>[
+              const NavigationRailDestination(
+                icon: Icon(Icons.edit_rounded),
+                label: Text('Editor'),
+              ),
+              const NavigationRailDestination(
+                icon: Icon(Icons.photo_album_rounded),
+                label: Text('View'),
+              ),
+              const NavigationRailDestination(
+                icon: Icon(Icons.folder_rounded),
+                label: Text('Import'),
+              ),
+              const NavigationRailDestination(
+                icon: Icon(Icons.save_alt_rounded),
+                label: Text('Export'),
+              ),
+              const NavigationRailDestination(
+                  icon: Icon(Icons.settings_rounded), label: Text('Settings')),
+              if (apiUp.data ?? false)
+                const NavigationRailDestination(
+                  icon: Icon(Icons.cloud_upload_rounded),
+                  label: Text('Sync'),
+                ),
+            ],
+            selectedIndex: getNavRailIndex(),
+            useIndicator: true,
+            onDestinationSelected: (int index) async {
+              if (index == 0) {
+                // editor
+                setState(() {
+                  currentPage = Pages.editor;
+                });
+              } else if (index == 1) {
+                // view
+                setState(() {
+                  currentPage = Pages.view;
+                });
+              } else if (index == 2) {
+                List<painter.Image> newSprites = await importFile(context);
+                setState(() {
+                  sprites = newSprites;
+                });
+              } else if (index == 3) {
+                String json = exportJson(sprites);
+                exportFile(context, json);
+              } else if (index == 4) {
+                // settings
+                setState(() {
+                  currentPage = Pages.settings;
+                });
+              } else if (index == 5) {
+                showCodeDialog(context).then((value) async {
+                  if (value != null) {
+                    var result = await submitAvatar(exportJson(sprites), value);
+                    if (!result) {
+                      if (context.mounted) {
+                        showSnackbar(context, 'Upload failed');
+                      }
+                    } else {
+                      if (context.mounted) {
+                        showSnackbar(context, 'Upload successful!');
+                      }
+                    }
+                  }
+                });
+              }
+            },
+          );
+        });
   }
 
   Widget bottomBar() {
@@ -426,6 +443,7 @@ class _EditorPageState extends State<Editor>
   var dragging = false;
 
   Widget drawer(BuildContext context) {
+    int currentPageIndex = 0;
     final GlobalKey key = GlobalKey();
     Future<Size> getSizes() async {
       return await Future.delayed(Duration.zero, () {
@@ -465,36 +483,47 @@ class _EditorPageState extends State<Editor>
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.all(Radius.circular(0)),
               ),
-              child: ValueListenableBuilder(
-                  valueListenable: imageSelected,
-                  builder: (context, spriteSelected, _) {
-                    return DefaultTabController(
-                      length: (colorPalettes.isNotEmpty) ? 3 : 2,
-                      child: Scaffold(
-                        bottomNavigationBar: TabBar(
-                          tabs: [
-                            const Tab(
-                              icon: Icon(Icons.layers_rounded),
-                            ),
-                            const Tab(
-                              icon: Icon(Icons.colorize_rounded),
-                            ),
-                            if (colorPalettes.isNotEmpty)
-                              const Tab(
-                                icon: Icon(Icons.palette_rounded),
+              child: StatefulBuilder(builder: (context, setState) {
+                return ValueListenableBuilder(
+                    valueListenable: imageSelected,
+                    builder: (context, spriteSelected, _) {
+                      return DefaultTabController(
+                        length: (colorPalettes.isNotEmpty) ? 3 : 2,
+                        child: Scaffold(
+                          bottomNavigationBar: NavigationBar(
+                            height: 70,
+                            labelBehavior: NavigationDestinationLabelBehavior
+                                .onlyShowSelected,
+                            onDestinationSelected: (int index) {
+                              setState(() {
+                                currentPageIndex = index;
+                              });
+                            },
+                            selectedIndex: currentPageIndex,
+                            destinations: const <Widget>[
+                              NavigationDestination(
+                                icon: Icon(Icons.layers_rounded),
+                                label: 'Frames',
                               ),
-                          ],
-                        ),
-                        body: TabBarView(
-                          children: [
+                              NavigationDestination(
+                                icon: Icon(Icons.colorize_rounded),
+                                label: 'Color',
+                              ),
+                              NavigationDestination(
+                                icon: Icon(Icons.palette_rounded),
+                                label: 'Palette',
+                              ),
+                            ],
+                          ),
+                          body: [
                             framesDrawer(context),
                             colorDrawer(),
-                            if (colorPalettes.isNotEmpty) colorPaletteDrawer(),
-                          ],
+                            colorPaletteDrawer(),
+                          ][currentPageIndex],
                         ),
-                      ),
-                    );
-                  })),
+                      );
+                    });
+              })),
           if (dragging)
             FutureBuilder<Size>(
               future: getSizes(),
@@ -536,14 +565,19 @@ class _EditorPageState extends State<Editor>
             for (var i = 0; i < colorPalettes.length; i++)
               ListTile(
                 title: Text(colorPalettes[i].name),
-                subtitle: previewsVisible.value? SizedBox(
-                    child: Row(
-                      children: [
-                        Image.memory(Uint8List.fromList(colorPalettes[i].saveAsPng()),
-                                    gaplessPlayback: true, scale: 5,),
-                      ],
-                    ),
-                  ) : null,
+                subtitle: previewsVisible.value
+                    ? SizedBox(
+                        child: Row(
+                          children: [
+                            Image.memory(
+                              Uint8List.fromList(colorPalettes[i].saveAsPng()),
+                              gaplessPlayback: true,
+                              scale: 5,
+                            ),
+                          ],
+                        ),
+                      )
+                    : null,
                 onTap: () {
                   setState(() {
                     paletteSelected = i;
@@ -557,15 +591,15 @@ class _EditorPageState extends State<Editor>
         // show a grid of all colors in the palette
         return Scaffold(
           appBar: AppBar(
-                  title: Text(colorPalettes[paletteSelected].name),
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded),
-                    onPressed: () {
-                      setState(() {
-                        paletteSelected = -1;
-                      });
-                    },
-                  )),
+              title: Text(colorPalettes[paletteSelected].name),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () {
+                  setState(() {
+                    paletteSelected = -1;
+                  });
+                },
+              )),
           body: ListView(
             children: [
               GridView.count(

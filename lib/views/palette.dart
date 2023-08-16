@@ -351,7 +351,7 @@ class _PaletteEditorState extends State<PaletteEditor> {
           hoverColor: Colors.transparent,
           borderRadius: const BorderRadius.all(Radius.circular(8)),
           onTap: () {
-            setStateContainer(() {
+            this.setState(() {
               if (selected.contains(index)) {
                 selected.remove(index);
               } else {
@@ -378,7 +378,7 @@ class _PaletteEditorState extends State<PaletteEditor> {
                         child: Checkbox(
                             value: selected.contains(index),
                             onChanged: (value) {
-                              setStateContainer(() {
+                              this.setState(() {
                                 if (value == null) return;
                                 if (value) {
                                   selected.add(index);

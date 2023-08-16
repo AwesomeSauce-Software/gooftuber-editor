@@ -48,6 +48,21 @@ bool isPlatformAndroid() {
   return Platform.isAndroid;
 }
 
+String? getPlatformString() {
+  if (kIsWeb) {
+    return null;
+  }
+  if (isPlatformWindows()) {
+    return 'windows';
+  } else if (isPlatformLinux()) {
+    return 'linux';
+  } else if (isPlatformMacos()) {
+    return 'macos';
+  }
+  return null;
+
+}
+
 void exitApp() {
   if (isPlatformWindows() || isPlatformLinux() || isPlatformMacos()) {
     exit(0);

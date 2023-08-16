@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gooftuber_editor/main.dart';
 import 'package:gooftuber_editor/tools/apitools.dart';
+import 'package:gooftuber_editor/tools/jsonexport.dart';
 import 'package:gooftuber_editor/tools/platformtools.dart';
 import 'package:gooftuber_editor/tools/webtools.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -136,15 +137,28 @@ Future<bool?> showUpdateDialog(BuildContext context) async {
             ),
             TextButton(
               child: const Text('Yes'),
-              onPressed: () {
+              onPressed: () async {
                 if (isPlatformWeb()) {
                   reloadPage();
                   Navigator.of(context).pop(true);
                   return;
                 }
-                launchUrl(Uri.parse(
-                    'https://github.com/AwesomeSauce-Software/gooftuber-editor/releases'));
-                Navigator.of(context).pop(true);
+                if (context.mounted) Navigator.of(context).pop(true);
+                var result = await downloadUpdateDialog(context);
+                if (result != null && result) {
+                  if (context.mounted) {
+                    showDownloadDoneDialog(context);
+                  }
+                } else {
+                  if (context.mounted) {
+                    showSnackbar(context,
+                          "Download failed, please check the GitHub releases page manually.",
+                          action: SnackBarAction(
+                              label: "Open",
+                              onPressed: () => launchUrl(Uri.parse(
+                                  "https://github.com/AwesomeSauce-Software/gooftuber-editor/releases"))));
+                  }
+                }
               },
             ),
           ],
@@ -153,6 +167,89 @@ Future<bool?> showUpdateDialog(BuildContext context) async {
     );
   } else {
     return Future.value(false);
+  }
+}
+
+Future<bool?> downloadUpdateDialog(
+  context,
+) async {
+  if (context.mounted) {
+    ValueNotifier<int> progress = ValueNotifier(0);
+    var done = false;
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: progress.value == 100,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Downloading update, please wait...'),
+          content: FutureBuilder(
+              future: downloadFile(context, (received, total) {
+                if (total != -1 && !done) {
+                  progress.value = (received / total * 100).floor();
+                }
+              }),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  var fileName = "gooftuber-editor-latest.zip";
+                  if (snapshot.data != null && context.mounted) {
+                    done = true;
+                    exportBytes(context, snapshot.data!, fileName, ['zip']);
+                    Navigator.of(context).pop(true);
+                  } else {
+                    if (context.mounted) {
+                      Navigator.of(context).pop(false);
+                    }
+                  }
+                  return const SizedBox();
+                } else {
+                  return ValueListenableBuilder(
+                      valueListenable: progress,
+                      builder: (context, progressNow, _) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(value: progressNow / 100),
+                            const SizedBox(height: 16),
+                            Text('$progressNow%'),
+                          ],
+                        );
+                      });
+                }
+              }),
+        );
+      },
+    );
+  }
+  return null;
+}
+
+Future<void> showDownloadDoneDialog(BuildContext context) async {
+  if (context.mounted) {
+    return showDialog<void>(
+      barrierDismissible: false,
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Download complete!'),
+          content: const Text(
+              'The download is complete, please install the app and delete the old one.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Exit'),
+              onPressed: () {
+                exitApp();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 

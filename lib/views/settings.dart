@@ -17,10 +17,12 @@ class SettingsView extends StatefulWidget {
 class Setting {
   String title;
   String subtitle;
-  Widget trailing;
+  Widget? trailing;
   List<SettingAction>? items;
   Widget? leading;
-  Setting(this.title, this.subtitle, this.trailing, {this.items, this.leading});
+  bool? state;
+  Setting(this.title, this.subtitle, this.trailing,
+      {this.items, this.leading, this.state});
 }
 
 class SettingAction {
@@ -80,34 +82,51 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   Widget settingsTile(Setting setting) {
-    return (setting.items != null)
-        ? PopupMenuButton(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            tooltip: '',
-            child: ListTile(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              title: Text(setting.title),
-              subtitle: Text(setting.subtitle),
-              trailing: setting.trailing,
-              leading: setting.leading,
-            ),
-            itemBuilder: (context) {
-              return [
-                for (var i = 0; i < setting.items!.length; i++)
-                  PopupMenuItem(
-                    value: i,
-                    child: Text(setting.items![i].title),
-                  )
-              ];
-            },
-            onSelected: (value) {
-              setting.items![value].action();
-            },
-          )
+    return (setting.items != null) // if we have 2, we might as well toggle
+        ? (setting.items!.length != 2)
+            ? PopupMenuButton(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                tooltip: '',
+                child: ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  title: Text(setting.title),
+                  subtitle: Text(setting.subtitle),
+                  trailing: setting.trailing,
+                  leading: setting.leading,
+                ),
+                itemBuilder: (context) {
+                  return [
+                    for (var i = 0; i < setting.items!.length; i++)
+                      PopupMenuItem(
+                        value: i,
+                        child: Text(setting.items![i].title),
+                      )
+                  ];
+                },
+                onSelected: (value) {
+                  setting.items![value].action();
+                },
+              )
+            : ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                title: Text(setting.title),
+                subtitle: Text(setting.subtitle),
+                trailing: setting.trailing,
+                leading: setting.leading,
+                onTap: () {
+                  if (setting.state ?? true) {
+                    setting.items![1].action();
+                  } else {
+                    setting.items![0].action();
+                  }
+                },
+              )
         : ListTile(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -190,6 +209,32 @@ class _SettingsViewState extends State<SettingsView> {
                               leading: const Icon(Icons.brightness_4_rounded),
                             ));
                           }),
+                          ValueListenableBuilder(
+                          valueListenable: familiarityMode,
+                          builder: (context, value, _) {
+                            return settingsTile(Setting(
+                              "Familiarity Mode",
+                              "Swap Drawer and Navigation Rail position",
+                              Switch(
+                                  value: value,
+                                  onChanged: (value) async {
+                                    familiarityMode.value = value;
+                                    await saveSettings();
+                                  }),
+                              items: [
+                                SettingAction("On", () async {
+                                    familiarityMode.value = true;
+                                    await saveSettings();
+                                  }),
+                                  SettingAction("Off", () async {
+                                    familiarityMode.value = false;
+                                    await saveSettings();
+                                  })
+                              ],
+                              leading: const Icon(Icons.brightness_4_rounded),
+                              state: value,
+                            ));
+                          }),
                     ]),
                     const SizedBox(height: 16),
                     settingsSubGroup("Editor Settings", [
@@ -199,9 +244,12 @@ class _SettingsViewState extends State<SettingsView> {
                             return settingsTile(Setting(
                                 'Auto Save Projects every 5 minutes',
                                 'Save your projects automatically every 5 minutes to prevent data loss.',
-                                saveValue
-                                    ? const Icon(Icons.check)
-                                    : const Icon(Icons.close),
+                                Switch(
+                                    value: saveValue,
+                                    onChanged: (value) async {
+                                      autoSave.value = value;
+                                      await saveSettings();
+                                    }),
                                 items: [
                                   SettingAction("On", () async {
                                     autoSave.value = true;
@@ -212,7 +260,8 @@ class _SettingsViewState extends State<SettingsView> {
                                     await saveSettings();
                                   })
                                 ],
-                                leading: const Icon(Icons.save_rounded)));
+                                leading: const Icon(Icons.save_rounded),
+                                state: saveValue));
                           }),
                       ValueListenableBuilder(
                           valueListenable: previewsVisible,
@@ -220,9 +269,12 @@ class _SettingsViewState extends State<SettingsView> {
                             return settingsTile(Setting(
                                 'Show Previews',
                                 'Show Previews in the Frames Drawer',
-                                previewsValue
-                                    ? const Icon(Icons.check_rounded)
-                                    : const Icon(Icons.close_rounded),
+                                Switch(
+                                    value: previewsValue,
+                                    onChanged: (value) async {
+                                      previewsVisible.value = value;
+                                      await saveSettings();
+                                    }),
                                 items: [
                                   SettingAction("On", () async {
                                     previewsVisible.value = true;
@@ -233,7 +285,34 @@ class _SettingsViewState extends State<SettingsView> {
                                     await saveSettings();
                                   })
                                 ],
-                                leading: const Icon(Icons.preview_rounded)));
+                                leading: const Icon(Icons.preview_rounded),
+                                state: previewsValue));
+                          }),
+                      ValueListenableBuilder(
+                          valueListenable: disableOnlineFeatures,
+                          builder: (context, value, _) {
+                            return settingsTile(Setting(
+                                'Offline Mode',
+                                'Disable all online features.',
+                                Switch(
+                                    value: value,
+                                    onChanged: (value) async {
+                                      disableOnlineFeatures.value = value;
+                                      await saveSettings();
+                                    }),
+                                items: [
+                                  SettingAction("On", () async {
+                                    disableOnlineFeatures.value = true;
+                                    showSnackbar(context, "Restart the App to apply the changes.");
+                                    await saveSettings();
+                                  }),
+                                  SettingAction("Off", () async {
+                                    disableOnlineFeatures.value = false;
+                                    await saveSettings();
+                                  })
+                                ],
+                                leading: const Icon(Icons.wifi_off_rounded),
+                                state: value));
                           }),
                       settingsTileTap(Setting(
                           "Palettes",
@@ -279,10 +358,10 @@ class _SettingsViewState extends State<SettingsView> {
                         leading: const Icon(Icons.help_rounded))),
                     settingsTileTap(Setting(
                       "Version $currentTag",
-                      "Click to check for updates",
-                      const Icon(Icons.chevron_right_rounded),
+                      disableOnlineFeatures.value? "Cannot check for Updates - Offline Mode on." : "Click to check for updates",
+                      disableOnlineFeatures.value? null : const Icon(Icons.chevron_right_rounded),
                       items: [
-                        SettingAction("Check for Updates", () async {
+                        if (!disableOnlineFeatures.value) SettingAction("Check for Updates", () async {
                           var state = await isClientOutOfDate();
                           if (context.mounted) {
                             switch (state) {

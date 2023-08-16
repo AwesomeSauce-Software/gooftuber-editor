@@ -6,7 +6,7 @@ import 'package:gooftuber_editor/views/painter.dart' as painter;
 import 'package:gooftuber_editor/tools/platformtools.dart';
 import 'package:window_manager/window_manager.dart';
 
-String currentTag = "v1.0.7";
+String currentTag = "v1.0.8";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,5 +74,7 @@ ValueNotifier<List<painter.Image>> spriteRedo = ValueNotifier([]);
 ValueNotifier<int> imageSelected = ValueNotifier(0);
 ValueNotifier<List<Color>> colorHistory = ValueNotifier([]);
 ValueNotifier<bool> autoSave = ValueNotifier(false);
+ValueNotifier<bool> disableOnlineFeatures = ValueNotifier(false);
+ValueNotifier<bool> familiarityMode = ValueNotifier(false);
 
 List<painter.ColorPalette> colorPalettes = [];
