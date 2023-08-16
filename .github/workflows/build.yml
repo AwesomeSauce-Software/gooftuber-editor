@@ -95,8 +95,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: |
-            build/linux/x64/release/bundle/gooftuber-editor_${{github.ref_name}}_amd64.deb
-            build/linux/x64/release/bundle/gooftuber-editor-${{github.ref_name}}.x86_64.rpm
+            gooftuber-editor_${{github.ref_name}}_amd64.deb
+            gooftuber-editor-${{github.ref_name}}.x86_64.rpm
 
   build-and-release-web:
     runs-on: ubuntu-latest
