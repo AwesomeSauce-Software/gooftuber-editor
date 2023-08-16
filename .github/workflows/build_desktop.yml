@@ -24,7 +24,7 @@ jobs:
 
   build-and-release-linux:
     runs-on: ubuntu-latest
-    depends-on: test
+    needs: test
 
     permissions:
         contents: write
@@ -56,7 +56,7 @@ jobs:
 
   build-and-release-windows:
     runs-on: windows-latest
-    depends-on: test
+    needs: test
 
     permissions:
         contents: write
@@ -86,7 +86,7 @@ jobs:
 
   build-and-release-macos:
     runs-on: macos-latest
-    depends-on: test
+    needs: test
 
     permissions:
         contents: write
