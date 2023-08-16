@@ -4,6 +4,7 @@ import 'package:gooftuber_editor/tools/apitools.dart';
 import 'package:gooftuber_editor/tools/jsonexport.dart';
 import 'package:gooftuber_editor/views/dialogs.dart';
 import 'package:gooftuber_editor/views/editor.dart';
+import 'package:gooftuber_editor/views/palette.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -233,6 +234,20 @@ class _SettingsViewState extends State<SettingsView> {
                                 ],
                                 leading: const Icon(Icons.preview_rounded)));
                           }),
+                      settingsTileTap(Setting(
+                          "Paletes",
+                          "Edit, add or Export your Colorpalettes for the Editor",
+                          const Icon(Icons.chevron_right_rounded),
+                          items: [
+                            SettingAction("Edit", () async {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const PaletteEditor()),
+                              );
+                            }),
+                          ],
+                          leading: const Icon(Icons.palette_rounded))),
                     ]),
                   ],
                   0),

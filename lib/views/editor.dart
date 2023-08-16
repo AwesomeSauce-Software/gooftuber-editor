@@ -31,6 +31,7 @@ class _EditorPageState extends State<Editor>
     with SingleTickerProviderStateMixin {
   void setupKeyboardShortcuts() {
     RawKeyboard.instance.addListener((RawKeyEvent event) {
+      if (currentPage != Pages.editor) return;
       if (event.runtimeType != RawKeyDownEvent) return;
 
       if (event.isControlPressed &&
@@ -468,49 +469,27 @@ class _EditorPageState extends State<Editor>
                   valueListenable: imageSelected,
                   builder: (context, spriteSelected, _) {
                     return DefaultTabController(
-                      length: 2,
+                      length: (colorPalettes.isNotEmpty) ? 3 : 2,
                       child: Scaffold(
-                        bottomNavigationBar: const TabBar(
+                        bottomNavigationBar: TabBar(
                           tabs: [
-                            Tab(
+                            const Tab(
                               icon: Icon(Icons.layers_rounded),
                             ),
-                            Tab(
-                              icon: Icon(Icons.color_lens_rounded),
+                            const Tab(
+                              icon: Icon(Icons.colorize_rounded),
                             ),
-                          ],
-                        ),
-                        appBar: AppBar(
-                          title: const Text("Frames and Color"),
-                          centerTitle: false,
-                          actions: [
-                            IconButton(
-                              icon: const Icon(Icons.add_rounded),
-                              onPressed: () async {
-                                if (isPlatformWeb()) {
-                                  var download =
-                                      await showDownloadDialog(context);
-                                  if (!download!) {
-                                    if (context.mounted) {
-                                      showSpriteNameDialog(
-                                          context,
-                                          nameController,
-                                          wxhController,
-                                          setState);
-                                    }
-                                  }
-                                } else {
-                                  showSpriteNameDialog(context, nameController,
-                                      wxhController, setState);
-                                }
-                              },
-                            ),
+                            if (colorPalettes.isNotEmpty)
+                              const Tab(
+                                icon: Icon(Icons.palette_rounded),
+                              ),
                           ],
                         ),
                         body: TabBarView(
                           children: [
                             framesDrawer(context),
                             colorDrawer(),
+                            if (colorPalettes.isNotEmpty) colorPaletteDrawer(),
                           ],
                         ),
                       ),
@@ -545,6 +524,91 @@ class _EditorPageState extends State<Editor>
         ],
       ),
     );
+  }
+
+  int paletteSelected = -1;
+  Widget colorPaletteDrawer() {
+    return StatefulBuilder(builder: ((context, setState) {
+      if (paletteSelected == -1) {
+        // show a list of all palettes
+        return ListView(
+          children: [
+            for (var i = 0; i < colorPalettes.length; i++)
+              ListTile(
+                title: Text(colorPalettes[i].name),
+                subtitle: previewsVisible.value? SizedBox(
+                    // height: 40,
+                    child: Row(
+                      children: [
+                        Image.memory(Uint8List.fromList(colorPalettes[i].saveAsPng()),
+                                    gaplessPlayback: true, scale: 5,),
+                      ],
+                    ),
+                  ) : null,
+                onTap: () {
+                  setState(() {
+                    paletteSelected = i;
+                  });
+                  // this.setState(() {});
+                },
+              ),
+          ],
+        );
+      } else {
+        // show a grid of all colors in the palette
+        return Scaffold(
+          appBar: AppBar(
+                  title: Text(colorPalettes[paletteSelected].name),
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    onPressed: () {
+                      setState(() {
+                        paletteSelected = -1;
+                      });
+                    },
+                  )),
+          body: ListView(
+            children: [
+              GridView.count(
+                shrinkWrap: true,
+                crossAxisCount: 4,
+                children: [
+                  for (var i = 0;
+                      i < colorPalettes[paletteSelected].colors.length;
+                      i++)
+                    InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () {
+                          setState(() {
+                            painter.colorSet.value =
+                                colorPalettes[paletteSelected].colors[i];
+                          });
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: colorPalettes[paletteSelected].colors[i],
+                            border: (painter.colorSet.value ==
+                                    colorPalettes[paletteSelected].colors[i])
+                                ? Border.all(
+                                    strokeAlign: BorderSide.strokeAlignOutside,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.5),
+                                    width: 3,
+                                  )
+                                : null,
+                          ),
+                        )),
+                ],
+              )
+            ],
+          ),
+        );
+      }
+    }));
   }
 
   Widget colorDrawer() {
@@ -615,101 +679,126 @@ class _EditorPageState extends State<Editor>
     );
   }
 
-  ListView framesDrawer(BuildContext context) {
-    return ListView(padding: EdgeInsets.zero, children: <Widget>[
-      for (var i = 0; i < sprites.length; i++)
-        InkWell(
-          onTap: () {
-            imageSelected.value = i;
-          },
-          child: Container(
-            color: i == imageSelected.value
-                ? Theme.of(context).colorScheme.onInverseSurface
-                : null,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: i == imageSelected.value
-                      ? const Icon(Icons.radio_button_checked_rounded)
-                      : const Icon(Icons.radio_button_off_rounded),
-                  trailing: PopupMenuButton(
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 0,
-                        child: Text('Edit'),
-                      ),
-                      const PopupMenuItem(
-                        value: 1,
-                        child: Text('Copy'),
-                      ),
-                      const PopupMenuItem(
-                        value: 2,
-                        child: Text('Export as PNG'),
-                      ),
-                      const PopupMenuItem(
-                        value: 3,
-                        child: Text('Delete'),
-                      ),
-                    ],
-                    onSelected: (value) {
-                      switch (value) {
-                        case 0:
-                          setState(() {
-                            // change name
-                            nameController.text = sprites[i].name;
-                            editNameDialog(
-                                context, i, nameController, setState);
-                          });
-                          break;
-                        case 1:
-                          setState(() {
-                            List<painter.Image> copyList = List.from(sprites);
-                            var frameType = copyList[i].frameType;
-                            if (frameType != painter.FrameTypes.expression) {
-                              frameType = painter.FrameTypes.expression;
-                            }
-                            var image = copyImage(copyList[i]);
-                            image.name += ' copy';
-                            image.frameType = frameType;
-                            sprites.add(image);
-                          });
-                          break;
-                        case 2:
-                          saveFile(i);
-                          break;
-                        case 3:
-                          setState(() {
-                            sprites.removeAt(i);
-                            if (imageSelected.value >= sprites.length) {
-                              imageSelected.value = sprites.length - 1;
-                            }
-                            if (sprites.isEmpty) {
-                              nameController.text = '';
-                            }
-                          });
-                          break;
-                      }
-                    },
-                  ),
-                  title:
-                      Text(sprites[i].frameType == painter.FrameTypes.expression
-                          ? sprites[i].name
-                          : sprites[i].frameType == painter.FrameTypes.talking
-                              ? 'Talking frame'
-                              : 'Non-talking frame'),
-                ),
-                if (previewsVisible.value && !isImageEmpty(sprites[i]))
-                  SizedBox(
-                      width: 128,
-                      height: 128,
-                      child: Image.memory(
-                          Uint8List.fromList(sprites[i].saveAsPng()),
-                          gaplessPlayback: true)),
-              ],
-            ),
+  Widget framesDrawer(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Frames and Color"),
+        centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_rounded),
+            onPressed: () async {
+              if (isPlatformWeb()) {
+                var download = await showDownloadDialog(context);
+                if (!download!) {
+                  if (context.mounted) {
+                    showSpriteNameDialog(
+                        context, nameController, wxhController, setState);
+                  }
+                }
+              } else {
+                showSpriteNameDialog(
+                    context, nameController, wxhController, setState);
+              }
+            },
           ),
-        )
-    ]);
+        ],
+      ),
+      body: ListView(padding: EdgeInsets.zero, children: <Widget>[
+        for (var i = 0; i < sprites.length; i++)
+          InkWell(
+            onTap: () {
+              imageSelected.value = i;
+            },
+            child: Container(
+              color: i == imageSelected.value
+                  ? Theme.of(context).colorScheme.onInverseSurface
+                  : null,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: i == imageSelected.value
+                        ? const Icon(Icons.radio_button_checked_rounded)
+                        : const Icon(Icons.radio_button_off_rounded),
+                    trailing: PopupMenuButton(
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 0,
+                          child: Text('Edit'),
+                        ),
+                        const PopupMenuItem(
+                          value: 1,
+                          child: Text('Copy'),
+                        ),
+                        const PopupMenuItem(
+                          value: 2,
+                          child: Text('Export as PNG'),
+                        ),
+                        const PopupMenuItem(
+                          value: 3,
+                          child: Text('Delete'),
+                        ),
+                      ],
+                      onSelected: (value) {
+                        switch (value) {
+                          case 0:
+                            setState(() {
+                              // change name
+                              nameController.text = sprites[i].name;
+                              editNameDialog(
+                                  context, i, nameController, setState);
+                            });
+                            break;
+                          case 1:
+                            setState(() {
+                              List<painter.Image> copyList = List.from(sprites);
+                              var frameType = copyList[i].frameType;
+                              if (frameType != painter.FrameTypes.expression) {
+                                frameType = painter.FrameTypes.expression;
+                              }
+                              var image = copyImage(copyList[i]);
+                              image.name += ' copy';
+                              image.frameType = frameType;
+                              sprites.add(image);
+                            });
+                            break;
+                          case 2:
+                            saveFile(i);
+                            break;
+                          case 3:
+                            setState(() {
+                              sprites.removeAt(i);
+                              if (imageSelected.value >= sprites.length) {
+                                imageSelected.value = sprites.length - 1;
+                              }
+                              if (sprites.isEmpty) {
+                                nameController.text = '';
+                              }
+                            });
+                            break;
+                        }
+                      },
+                    ),
+                    title: Text(
+                        sprites[i].frameType == painter.FrameTypes.expression
+                            ? sprites[i].name
+                            : sprites[i].frameType == painter.FrameTypes.talking
+                                ? 'Talking frame'
+                                : 'Non-talking frame'),
+                  ),
+                  if (previewsVisible.value && !isImageEmpty(sprites[i]))
+                    SizedBox(
+                        width: 128,
+                        height: 128,
+                        child: Image.memory(
+                            Uint8List.fromList(sprites[i].saveAsPng()),
+                            gaplessPlayback: true)),
+                ],
+              ),
+            ),
+          )
+      ]),
+    );
   }
 }

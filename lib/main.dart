@@ -6,7 +6,7 @@ import 'package:gooftuber_editor/views/painter.dart' as painter;
 import 'package:gooftuber_editor/tools/platformtools.dart';
 import 'package:window_manager/window_manager.dart';
 
-String currentTag = "v1.0.4";
+String currentTag = "v1.0.5";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +32,7 @@ class Gooftuber extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     loadProject(context);
+    loadSettings();
     return ValueListenableBuilder(
       valueListenable: appTheme,
       builder: (_, mode, __) {
@@ -73,3 +74,5 @@ ValueNotifier<List<painter.Image>> spriteRedo = ValueNotifier([]);
 ValueNotifier<int> imageSelected = ValueNotifier(0);
 ValueNotifier<List<Color>> colorHistory = ValueNotifier([]);
 ValueNotifier<bool> autoSave = ValueNotifier(false);
+
+List<painter.ColorPalette> colorPalettes = [];

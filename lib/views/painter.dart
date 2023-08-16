@@ -11,6 +11,60 @@ import 'package:gooftuber_editor/tools/sprite_tools.dart';
 
 enum FrameTypes { talking, nontalking, expression }
 
+class ColorPalette {
+  ColorPalette(this.name, this.colors);
+  List<Color> colors;
+  String name;
+
+  factory ColorPalette.fromJson(Map<String, dynamic> json) {
+    List<int> colorValues = List<int>.from(json['colors']);
+    List<Color> colors = colorValues.map((value) => Color(value)).toList();
+    return ColorPalette(json['name'], colors);
+  }
+
+  factory ColorPalette.fromPng(Uint8List bytes, String name) {
+    List<Color> colors = [];
+    Uint8List uint8list = bytes;
+    img.Image png = img.decodeImage(uint8list)!;
+    for (int i = 0; i < png.height; i++) {
+      for (int j = 0; j < png.width; j++) {
+        img.Pixel pixel = png.getPixel(j, i);
+        int r = pixel.r.toInt();
+        int g = pixel.g.toInt();
+        int b = pixel.b.toInt();
+        int a = pixel.a.toInt();
+        ui.Color color = ui.Color.fromARGB(a, r, g, b);
+        colors.add(color);
+      }
+    }
+    return ColorPalette(name, colors);
+  }
+
+  Map<String, dynamic> toJson() {
+    List<int> colorValues = colors.map((color) => color.value).toList();
+    return {'name': name, 'colors': colorValues};
+  }
+
+  List<int> saveAsPng() {
+    // max 128 width, height is calculated
+    int width = min(colors.length, 128) * 18;
+    int height = (colors.length / 128).ceil() * 18;
+    var png = img.Image(width: width, height: height, numChannels: 4);
+
+    for (int i = 0; i < colors.length; i++) {
+      int x = (i % 128) * 18;
+      int y = (i / 128).floor() * 18;
+      for (int j = 0; j < 18; j++) {
+        for (int k = 0; k < 18; k++) {
+          png.setPixelRgba(x + k, y + j, colors[i].red, colors[i].green,
+              colors[i].blue, colors[i].alpha);
+        }
+      }
+    }
+    return img.encodePng(png);
+  }
+}
+
 // struct of image, contains pixel data, width, height, and name
 class Image {
   Image(this.name, this.width, this.height, this.pixels, this.frameType);

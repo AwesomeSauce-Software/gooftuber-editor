@@ -1,5 +1,8 @@
 name: Deploy latest editor
-on: [push]
+on:
+  push:
+    branches:
+      - master
 jobs:
 
   build:

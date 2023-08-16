@@ -32,8 +32,7 @@ String exportJson(List<painter.Image> images) {
     } else if (image.frameType == painter.FrameTypes.nontalking) {
       name = 'nontalking.png';
     }
-    avatars.add(
-        {"filename": name, "base64": base64Encode(image.saveAsPng())});
+    avatars.add({"filename": name, "base64": base64Encode(image.saveAsPng())});
   }
   return jsonEncode({"avatars": avatars});
 }
@@ -44,14 +43,17 @@ List<painter.Image> importJson(context, String json) {
     Map<String, dynamic> data = jsonDecode(json);
     for (Map<String, dynamic> avatar in data["avatars"]) {
       var pixels = painter.loadFromPng(base64Decode(avatar["base64"]!));
-      if (avatar["filename"]!.replaceAll('.png', '').toLowerCase() == 'talking' ||
-          avatar["filename"]!.replaceAll('.png', '').toLowerCase() == 'nontalking') {
+      if (avatar["filename"]!.replaceAll('.png', '').toLowerCase() ==
+              'talking' ||
+          avatar["filename"]!.replaceAll('.png', '').toLowerCase() ==
+              'nontalking') {
         images.add(painter.Image(
             '',
             pixels[0].length,
             pixels.length,
             pixels,
-            avatar["filename"]!.replaceAll('.png', '').toLowerCase() == 'talking'
+            avatar["filename"]!.replaceAll('.png', '').toLowerCase() ==
+                    'talking'
                 ? painter.FrameTypes.talking
                 : painter.FrameTypes.nontalking));
         continue;
@@ -93,6 +95,66 @@ Future<void> exportFile(BuildContext context, String json) async {
   updater.value++;
 }
 
+Future<void> importPalettePng(context, Uint8List bytes, name) async {
+  var palette = painter.ColorPalette.fromPng(bytes, name);
+  colorPalettes.add(palette);
+  saveColorPalettes();
+}
+
+Future<void> importPalette(context) async {
+  FilePickerResult? result = await FilePicker.platform
+      .pickFiles(type: FileType.custom, allowedExtensions: ['json', 'png']);
+  if (result == null) {
+    return;
+  }
+
+  if (result.files.single.extension == 'png') {
+    if (isPlatformWeb()) {
+      return importPalettePng(context, result.files.single.bytes!, result.files.single.name.replaceAll('.png', ''));
+    } else {
+      File file = File(result.files.single.path!);
+      file.readAsBytes().then((bytes) {
+        importPalettePng(context, bytes, result.files.single.name.replaceAll('.png', ''));
+      });
+    }
+
+    return;
+  }
+
+  if (isPlatformWeb()) {
+    // parse result.files.single.bytes to string
+    var text = utf8.decode(result.files.single.bytes!);
+    var palette = painter.ColorPalette.fromJson(jsonDecode(text));
+    colorPalettes.add(palette);
+    saveColorPalettes();
+  } else {
+    File file = File(result.files.single.path!);
+    file.readAsString().then((String json) {
+      var palette = painter.ColorPalette.fromJson(jsonDecode(json));
+      colorPalettes.add(palette);
+      saveColorPalettes();
+    });
+  }
+}
+
+Future<void> exportString(BuildContext context, String json, String filename,
+    List<String> filetypes) async {
+  // save as dialog
+  if (isPlatformWeb()) {
+    saveFileOnWeb(Uint8List.fromList(utf8.encode(json)), filename);
+    return;
+  }
+
+  String? outputFile = await FilePicker.platform.saveFile(
+      dialogTitle: 'Save as', allowedExtensions: filetypes, fileName: filename);
+  if (outputFile == null) {
+    return;
+  } else {
+    List<int> bytes = utf8.encode(json);
+    await File(outputFile).writeAsBytes(bytes);
+  }
+}
+
 Future<List<painter.Image>> importFile(context) async {
   if (sprites.isNotEmpty) {
     if (await showConfirmDialog(context, 'Importing',
@@ -113,24 +175,31 @@ Future<List<painter.Image>> importFile(context) async {
     return importJson(context, text);
   } else {
     File file = File(result.files.single.path!);
-  String json = await file.readAsString();
-  return importJson(context, json);
+    String json = await file.readAsString();
+    return importJson(context, json);
   }
 }
 
 Future<void> loadProject(context) async {
-final prefs = await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance();
   if (prefs.getString("project") != null) {
     sprites = importJson(context, prefs.getString("project")!);
     updater.value++;
   }
-  return ;
+  return;
 }
 
 Future<void> loadSettings() async {
   final prefs = await SharedPreferences.getInstance();
   autoSave.value = prefs.getBool("autoSave") ?? false;
   appTheme.value = prefs.getInt("theme") ?? 2;
+  if (prefs.getStringList("colorPalettes") != null) {
+    List<String> jsonList = prefs.getStringList("colorPalettes")!;
+    colorPalettes = jsonList
+        .map((palette) => painter.ColorPalette.fromJson(
+            jsonDecode(palette) as Map<String, dynamic>))
+        .toList();
+  }
   return;
 }
 
@@ -138,6 +207,14 @@ Future<void> saveSettings() async {
   final prefs = await SharedPreferences.getInstance();
   prefs.setBool("autoSave", autoSave.value);
   prefs.setInt("theme", appTheme.value);
+  return;
+}
+
+Future<void> saveColorPalettes() async {
+  final prefs = await SharedPreferences.getInstance();
+  List<String> jsonList =
+      colorPalettes.map((palette) => jsonEncode(palette)).toList();
+  prefs.setStringList("colorPalettes", jsonList);
   return;
 }
 
@@ -156,12 +233,11 @@ Future<void> saveFile(int image) async {
 
   if (isPlatformWeb()) {
     var name = sprites[image].name;
-  if (sprites[image].frameType == painter.FrameTypes.talking) {
-    name = 'talking';
-  } else if (sprites[image].frameType ==
-      painter.FrameTypes.nontalking) {
-    name = 'nontalking';
-  }
+    if (sprites[image].frameType == painter.FrameTypes.talking) {
+      name = 'talking';
+    } else if (sprites[image].frameType == painter.FrameTypes.nontalking) {
+      name = 'nontalking';
+    }
     saveFileOnWeb(Uint8List.fromList(sprites[image].saveAsPng()), '$name.png');
     return;
   }
@@ -176,8 +252,7 @@ Future<void> saveFile(int image) async {
   var name = sprites[image].name;
   if (sprites[image].frameType == painter.FrameTypes.talking) {
     name = 'talking';
-  } else if (sprites[image].frameType ==
-      painter.FrameTypes.nontalking) {
+  } else if (sprites[image].frameType == painter.FrameTypes.nontalking) {
     name = 'nontalking';
   }
   String? outputFile = await FilePicker.platform.saveFile(
