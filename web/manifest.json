@@ -6,7 +6,7 @@
     "background_color": "##7b01c2",
     "theme_color": "##7b01c2",
     "description": "Gooftuber Avatar Studio - the tool you need to make goofy avatars!",
-    "orientation": "landscape",
+    "orientation": "portrait",
     "prefer_related_applications": false,
     "icons": [
         {
