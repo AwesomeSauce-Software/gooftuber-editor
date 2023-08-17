@@ -294,7 +294,7 @@ class _PainterState extends State<Painter> {
                       builder: (context, setState) => GestureDetector(
                           behavior: HitTestBehavior.translucent,
                           onPanStart: (details) {
-                            if (details.kind == PointerDeviceKind.trackpad) {
+                            if (details.kind == PointerDeviceKind.trackpad || details.kind == PointerDeviceKind.touch) {
                               return;
                             }
                             setState(() {
