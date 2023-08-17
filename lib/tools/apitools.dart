@@ -13,7 +13,8 @@ import 'package:dio/dio.dart';
 const apiBase = "https://api.awesomesauce.software";
 
 Future<String> getChangelog(String tag) async {
-  if (disableOnlineFeatures.value) return "Online features disabled, to enable them go to settings.";
+  if (disableOnlineFeatures.value)
+    return "Online features disabled, to enable them go to settings.";
   if (tag == 'latest') {
     var latest = await getLatestTag();
     if (latest == null) {
@@ -134,6 +135,7 @@ Future<String?> getLatestTag() async {
 
 Future<ClientState> isClientOutOfDate() async {
   if (disableOnlineFeatures.value) return ClientState.upToDate;
+  if (isPlatformMobile()) return ClientState.upToDate;
   // check if client is out of date by comparing version numbers with github tags
   String? latestTag = await getLatestTag();
   if (latestTag != null) {
@@ -151,16 +153,17 @@ int tagToVersion(String tag) {
   return int.parse(tag.replaceAll(".", "").replaceAll("v", ""));
 }
 
+bool? isUp;
+
 Future<bool> isApiUp() {
   if (disableOnlineFeatures.value) return Future.value(false);
   // if apiBase/ping is status 200, return true
-
+  if (isUp != null) {
+    return Future.value(isUp);
+  }
   return http.get(Uri.parse("$apiBase/ping")).then((response) {
-    if (response.statusCode == 200) {
-      return true;
-    } else {
-      return false;
-    }
+    isUp = (response.statusCode == 200);
+    return isUp!;
   });
 }
 

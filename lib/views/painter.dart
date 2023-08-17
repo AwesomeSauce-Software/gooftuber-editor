@@ -250,6 +250,8 @@ class _PainterState extends State<Painter> {
     _width = MediaQuery.of(context).size.width;
     _height = MediaQuery.of(context).size.height;
 
+    var big = _width > 700;
+
     // return widget
     return ValueListenableBuilder(
         valueListenable: imageSelected,
@@ -258,31 +260,34 @@ class _PainterState extends State<Painter> {
               valueListenable: undoRedo,
               builder: (_, __, ___) {
                 _pixels = sprites[(selected != -1) ? selected : 0].pixels;
-                return mainPainterLayout(context, selected);
+                return mainPainterLayout(context, selected, big);
               });
         });
   }
 
-  Container mainPainterLayout(BuildContext context, int selected) {
+  Widget mainPainterLayout(BuildContext context, int selected, bool big) {
+    var size = min(MediaQuery.of(context).size.width,
+            MediaQuery.of(context).size.height) -
+        88;
     return Container(
       color: _backgroundColor,
       child: Column(
-        // mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          topBar(context, selected),
+          topBar(context, selected, big),
           const SizedBox(height: 4),
-          Center(
+          Expanded(
+              child: InteractiveViewer(
+            transformationController: _controller,
+            minScale: 0.2,
+            maxScale: 10,
             child: Container(
+              width: double.infinity,
               color: _backgroundColor,
               child: FittedBox(
                 fit: BoxFit.contain,
                 child: SizedBox(
-                  width: min(MediaQuery.of(context).size.width,
-                          MediaQuery.of(context).size.height) -
-                      88,
-                  height: min(MediaQuery.of(context).size.width,
-                          MediaQuery.of(context).size.height) -
-                      88,
+                  width: size,
+                  height: big ? size : size - 62,
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: StatefulBuilder(
@@ -328,27 +333,30 @@ class _PainterState extends State<Painter> {
                             isPainting = false;
                             blockPainting = true;
                           },
-                          child: CustomPaint(
-                              painter: PainterWidget(_pixels, showGrid,
-                                  background: sprites[selected].frameType ==
-                                          FrameTypes.expression
-                                      ? getPrimaryImage()?.pixels
-                                      : null,
-                                  backgroundVisible: backgroundVisible),
-                              size: Size(_width > _height ? _height : _width,
-                                  _width > _height ? _height : _width))),
+                          child: Padding(
+                            padding: const EdgeInsets.all(0.2),
+                            child: CustomPaint(
+                                painter: PainterWidget(_pixels, showGrid,
+                                    background: sprites[selected].frameType ==
+                                            FrameTypes.expression
+                                        ? getPrimaryImage()?.pixels
+                                        : null,
+                                    backgroundVisible: backgroundVisible),
+                                size: Size(_width > _height ? _height : _width,
+                                    _width > _height ? _height : _width)),
+                          )),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
+          )),
         ],
       ),
     );
   }
 
-  Container topBar(BuildContext context, int selected) {
+  Container topBar(BuildContext context, int selected, bool big) {
     return Container(
       color: Theme.of(context).colorScheme.surface,
       child: Row(
@@ -393,124 +401,126 @@ class _PainterState extends State<Painter> {
             ]),
           ),
           Expanded(
+              flex: big ? 1 : 3,
               child:
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            // eraser
-            IconButton(
-                tooltip: 'Eraser',
-                isSelected: tool == Tool.eraser,
-                icon: const Icon(Icons.clear_rounded),
-                onPressed: () {
-                  setState(() {
-                    tool = Tool.eraser;
-                  });
-                }),
-            IconButton(
-                tooltip: 'Brush',
-                isSelected: tool == Tool.brush,
-                icon: const Icon(Icons.brush_rounded),
-                onPressed: () {
-                  setState(() {
-                    tool = Tool.brush;
-                  });
-                }),
-            IconButton(
-                tooltip: 'Fill',
-                isSelected: tool == Tool.fill,
-                icon: const Icon(Icons.format_color_fill_rounded),
-                onPressed: () {
-                  setState(() {
-                    tool = Tool.fill;
-                  });
-                }),
-          ])),
+                // eraser
+                IconButton(
+                    tooltip: 'Eraser',
+                    isSelected: tool == Tool.eraser,
+                    icon: const Icon(Icons.clear_rounded),
+                    onPressed: () {
+                      setState(() {
+                        tool = Tool.eraser;
+                      });
+                    }),
+                IconButton(
+                    tooltip: 'Brush',
+                    isSelected: tool == Tool.brush,
+                    icon: const Icon(Icons.brush_rounded),
+                    onPressed: () {
+                      setState(() {
+                        tool = Tool.brush;
+                      });
+                    }),
+                IconButton(
+                    tooltip: 'Fill',
+                    isSelected: tool == Tool.fill,
+                    icon: const Icon(Icons.format_color_fill_rounded),
+                    onPressed: () {
+                      setState(() {
+                        tool = Tool.fill;
+                      });
+                    }),
+              ])),
           Expanded(
+              flex: big ? 1 : 3,
               child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-            if (sprites[selected].frameType == FrameTypes.expression)
-              IconButton(
-                tooltip: 'Toggle Background Preview',
-                icon: backgroundVisible
-                    ? const Icon(Icons.image_rounded)
-                    : const Icon(Icons.image_not_supported_rounded),
-                onPressed: () {
-                  setState(() {
-                    backgroundVisible = !backgroundVisible;
-                  });
-                },
-              ),
-            IconButton(
-              tooltip: 'Toggle grid',
-              isSelected: showGrid,
-              icon: showGrid
-                  ? const Icon(Icons.grid_on_rounded)
-                  : const Icon(Icons.grid_off_rounded),
-              onPressed: () {
-                setState(() {
-                  showGrid = !showGrid;
-                });
-              },
-            ),
-            IconButton(
-              tooltip: 'Color picker',
-              icon: const Icon(Icons.color_lens_rounded),
-              onPressed: () {
-                showDialog(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: const Text("Select a color!"),
-                        content: SingleChildScrollView(
-                          child: ColorPicker(
-                            portraitOnly: true,
-                            pickerAreaHeightPercent: 0.5,
-                            labelTypes: const [ColorLabelType.rgb],
-                            enableAlpha: true,
-                            pickerColor: colorSet.value,
-                            onColorChanged: (color) {
-                              setState(() {
-                                colorSet.value = color;
-                              });
-                            },
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("Close"),
-                          ),
-                        ],
-                      );
+                if (sprites[selected].frameType == FrameTypes.expression)
+                  IconButton(
+                    tooltip: 'Toggle Background Preview',
+                    icon: backgroundVisible
+                        ? const Icon(Icons.image_rounded)
+                        : const Icon(Icons.image_not_supported_rounded),
+                    onPressed: () {
+                      setState(() {
+                        backgroundVisible = !backgroundVisible;
+                      });
+                    },
+                  ),
+                IconButton(
+                  tooltip: 'Toggle grid',
+                  isSelected: showGrid,
+                  icon: showGrid
+                      ? const Icon(Icons.grid_on_rounded)
+                      : const Icon(Icons.grid_off_rounded),
+                  onPressed: () {
+                    setState(() {
+                      showGrid = !showGrid;
                     });
-              },
-            ),
-            IconButton(
-              tooltip: 'Color picker',
-              isSelected: tool == Tool.pick,
-              icon: const Icon(Icons.colorize_rounded),
-              onPressed: () {
-                setState(() {
-                  tool = Tool.pick;
-                });
-              },
-            ),
-            IconButton(
-              tooltip: 'Toggle background color',
-              icon: const Icon(Icons.format_paint_rounded),
-              onPressed: () {
-                // toggle background color
-                setState(() {
-                  if (_backgroundColor == Colors.grey) {
-                    // if brightness is bright, use white.
-                    _backgroundColor = Colors.transparent;
-                  } else {
-                    _backgroundColor = Colors.grey;
-                  }
-                });
-              },
-            ),
-          ]))
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Color picker',
+                  icon: const Icon(Icons.color_lens_rounded),
+                  onPressed: () {
+                    showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text("Select a color!"),
+                            content: SingleChildScrollView(
+                              child: ColorPicker(
+                                portraitOnly: true,
+                                pickerAreaHeightPercent: 0.5,
+                                labelTypes: const [ColorLabelType.rgb],
+                                enableAlpha: true,
+                                pickerColor: colorSet.value,
+                                onColorChanged: (color) {
+                                  setState(() {
+                                    colorSet.value = color;
+                                  });
+                                },
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: const Text("Close"),
+                              ),
+                            ],
+                          );
+                        });
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Color picker',
+                  isSelected: tool == Tool.pick,
+                  icon: const Icon(Icons.colorize_rounded),
+                  onPressed: () {
+                    setState(() {
+                      tool = Tool.pick;
+                    });
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Toggle background color',
+                  icon: const Icon(Icons.format_paint_rounded),
+                  onPressed: () {
+                    // toggle background color
+                    setState(() {
+                      if (_backgroundColor == Colors.grey) {
+                        // if brightness is bright, use white.
+                        _backgroundColor = Colors.transparent;
+                      } else {
+                        _backgroundColor = Colors.grey;
+                      }
+                    });
+                  },
+                ),
+              ]))
         ],
       ),
     );

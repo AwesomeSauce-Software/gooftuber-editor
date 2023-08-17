@@ -106,16 +106,20 @@ class _EditorPageState extends State<Editor>
     }
   }
 
-  Widget getPage() {
+  Widget getPage(bool big) {
     if (currentPage == Pages.editor) {
       return Container(
         key: const Key('editor'),
         color: Theme.of(context).colorScheme.surface,
         child: Row(
           children: [
-            if (familiarityMode.value && picturesVisible && currentPage == Pages.editor)
+            if (big &&
+                familiarityMode.value &&
+                picturesVisible &&
+                currentPage == Pages.editor)
               const VerticalDivider(width: 1),
-            if (familiarityMode.value &&
+            if (big &&
+                familiarityMode.value &&
                 picturesVisible &&
                 currentPage == Pages.editor)
               drawer(context),
@@ -138,9 +142,13 @@ class _EditorPageState extends State<Editor>
                             return const painter.Painter();
                           });
                     })),
-            if (!familiarityMode.value && picturesVisible && currentPage == Pages.editor)
+            if (big &&
+                !familiarityMode.value &&
+                picturesVisible &&
+                currentPage == Pages.editor)
               const VerticalDivider(width: 1),
-            if (!familiarityMode.value &&
+            if (big &&
+                !familiarityMode.value &&
                 picturesVisible &&
                 currentPage == Pages.editor)
               drawer(context)
@@ -163,19 +171,149 @@ class _EditorPageState extends State<Editor>
 
   @override
   Widget build(BuildContext context) {
+    // get screen width
+    final width = MediaQuery.of(context).size.width;
+
+    var big = width > 700;
+
     return Scaffold(
-      bottomNavigationBar: Container(
-        color: Theme.of(context).colorScheme.secondaryContainer,
-        child: bottomBar(),
-      ),
+      appBar: big
+          ? null
+          : (currentPage == Pages.editor)
+              ? AppBar(
+                  title: const Text('Editor'),
+                  actions: [
+                    ValueListenableBuilder(valueListenable: spriteBefore, builder: (context, before, _) {
+                      if (before.isEmpty) return Container();
+                      return IconButton(
+                        icon: const Icon(Icons.undo),
+                        onPressed: () {
+                          undo(currentPage);
+                          undoRedo.value = ++undoRedo.value;
+                        },
+                      );
+                    }),
+                    ValueListenableBuilder(valueListenable: spriteRedo, builder: (context, after, _) {
+                      if (after.isEmpty) return Container();
+                      return IconButton(
+                        icon: const Icon(Icons.redo),
+                        onPressed: () {
+                          redo(currentPage);
+                          undoRedo.value = ++undoRedo.value;
+                        },
+                      );
+                    }),
+                    FutureBuilder(
+                        future: isApiUp(),
+                        builder: (context, snapshot) {
+                          return PopupMenuButton(
+                            itemBuilder: (context) {
+                              var items = [
+                                const PopupMenuItem(
+                                  value: 0,
+                                  child: Text('Save'),
+                                ),
+                                const PopupMenuItem(
+                                  value: 1,
+                                  child: Text('Import'),
+                                ),
+                                const PopupMenuItem(
+                                  value: 2,
+                                  child: Text('Export'),
+                                )
+                              ];
+
+                              if (snapshot.hasData &&
+                                  (snapshot.data ?? false)) {
+                                items.add(const PopupMenuItem(
+                                  value: 3,
+                                  child: Text('Sync'),
+                                ));
+                              }
+
+                              return items;
+                            },
+                            onSelected: (value) async {
+                              switch (value) {
+                                case 0:
+                                  saveProject();
+                                  break;
+                                case 1:
+                                  List<painter.Image> newSprites =
+                                      await importFile(context);
+                                  setState(() {
+                                    sprites = newSprites;
+                                  });
+                                  break;
+                                case 2:
+                                  String json = exportJson(sprites);
+                                  exportFile(context, json);
+                                  break;
+                                case 3:
+                                  showCodeDialog(context).then((value) async {
+                                    if (value != null) {
+                                      var result = await submitAvatar(
+                                          exportJson(sprites), value);
+                                      if (!result) {
+                                        if (context.mounted) {
+                                          showSnackbar(
+                                              context, 'Upload failed');
+                                        }
+                                      } else {
+                                        if (context.mounted) {
+                                          showSnackbar(
+                                              context, 'Upload successful!');
+                                        }
+                                      }
+                                    }
+                                  });
+                                  break;
+                              }
+                            },
+                          );
+                        }),
+                  ],
+                )
+              : null,
+      drawer: big ? null : drawer(context),
+      bottomNavigationBar: big
+          ? Container(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              child: bottomBar(),
+            )
+          : NavigationBar(
+              height: 70,
+              labelBehavior:
+                  NavigationDestinationLabelBehavior.onlyShowSelected,
+              onDestinationSelected: (int index) {
+                setState(() {
+                  currentPage = Pages.values[index];
+                });
+              },
+              selectedIndex: currentPage.index,
+              destinations: const <Widget>[
+                NavigationDestination(
+                  icon: Icon(Icons.layers_rounded),
+                  label: 'Editor',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.colorize_rounded),
+                  label: 'View',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.palette_rounded),
+                  label: 'Settings',
+                ),
+              ],
+            ),
       body: SafeArea(
           child: ValueListenableBuilder(
               valueListenable: familiarityMode,
               builder: (context, familiarity, _) {
                 return Row(
                   children: [
-                    if (!familiarity && navRailVisible) navRail(),
-                    if (!familiarity && navRailVisible)
+                    if (big && !familiarity && navRailVisible) navRail(),
+                    if (big && !familiarity && navRailVisible)
                       const VerticalDivider(width: 1),
                     Expanded(
                         child: AnimatedSwitcher(
@@ -186,10 +324,10 @@ class _EditorPageState extends State<Editor>
                                 child: child,
                               );
                             },
-                            child: getPage())),
-                    if (familiarity && navRailVisible)
+                            child: getPage(big))),
+                    if (big && familiarity && navRailVisible)
                       const VerticalDivider(width: 1),
-                    if (familiarity && navRailVisible) navRail(),
+                    if (big && familiarity && navRailVisible) navRail(),
                   ],
                 );
               })),
@@ -500,19 +638,20 @@ class _EditorPageState extends State<Editor>
                               });
                             },
                             selectedIndex: currentPageIndex,
-                            destinations: const <Widget>[
-                              NavigationDestination(
+                            destinations: <Widget>[
+                              const NavigationDestination(
                                 icon: Icon(Icons.layers_rounded),
                                 label: 'Frames',
                               ),
-                              NavigationDestination(
+                              const NavigationDestination(
                                 icon: Icon(Icons.colorize_rounded),
                                 label: 'Color',
                               ),
-                              NavigationDestination(
-                                icon: Icon(Icons.palette_rounded),
-                                label: 'Palette',
-                              ),
+                              if (colorPalettes.isNotEmpty)
+                                const NavigationDestination(
+                                  icon: Icon(Icons.palette_rounded),
+                                  label: 'Palette',
+                                ),
                             ],
                           ),
                           body: [

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gooftuber_editor/main.dart';
@@ -20,6 +22,8 @@ Future<String?> showCodeDialog(context) {
   return showDialog(
       context: context,
       builder: (BuildContext context) {
+        // get width available for dialog
+        var width = MediaQuery.of(context).size.width;
         return AlertDialog(
           title: const Text('Enter Code'),
           content: Column(
@@ -32,7 +36,7 @@ Future<String?> showCodeDialog(context) {
                 children: [
                   for (var i = 0; i < 6; i++)
                     SizedBox(
-                      width: 50,
+                      width: min((width / 10) - 10, 50),
                       child: TextField(
                         controller: controllers[i],
                         textAlign: TextAlign.center,
@@ -41,11 +45,14 @@ Future<String?> showCodeDialog(context) {
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
                         ],
-                        decoration: InputDecoration(
+                        decoration: (50 < (width / 10) - 10)? InputDecoration(
                           counterText: '',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10.0),
                           ),
+                        ) : const InputDecoration(
+                          counterText: '',
+                          border: UnderlineInputBorder(),
                         ),
                         onChanged: (value) {
                           if (value.length == 1) {

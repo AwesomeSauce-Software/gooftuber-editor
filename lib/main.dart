@@ -6,7 +6,7 @@ import 'package:gooftuber_editor/views/painter.dart' as painter;
 import 'package:gooftuber_editor/tools/platformtools.dart';
 import 'package:window_manager/window_manager.dart';
 
-String currentTag = "v1.0.8";
+String currentTag = "v1.1.0";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +18,7 @@ Future<void> main() async {
 
   if (isPlatformMacos() || isPlatformLinux() || isPlatformWindows()) {
     // set min size
-    windowManager.setMinimumSize(const Size(960, 600));
+    windowManager.setMinimumSize(const Size(500, 600));
     // set title
     windowManager.setTitle('Gooftuber Avatar Editor');
   }
@@ -50,7 +50,11 @@ class Gooftuber extends StatelessWidget {
                 colorScheme: darkDynamic,
                 useMaterial3: true,
               ),
-              themeMode: mode == 0 ? ThemeMode.light : mode == 1 ? ThemeMode.dark : ThemeMode.system,
+              themeMode: mode == 0
+                  ? ThemeMode.light
+                  : mode == 1
+                      ? ThemeMode.dark
+                      : ThemeMode.system,
               debugShowCheckedModeBanner: false,
               home: const Editor(title: 'Gooftuber Avatar Editor'),
             );

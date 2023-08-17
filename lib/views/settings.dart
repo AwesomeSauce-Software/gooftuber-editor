@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gooftuber_editor/main.dart';
 import 'package:gooftuber_editor/tools/apitools.dart';
 import 'package:gooftuber_editor/tools/jsonexport.dart';
+import 'package:gooftuber_editor/tools/platformtools.dart';
 import 'package:gooftuber_editor/views/dialogs.dart';
 import 'package:gooftuber_editor/views/editor.dart';
 import 'package:gooftuber_editor/views/palette.dart';
@@ -35,46 +36,49 @@ class _SettingsViewState extends State<SettingsView> {
   Widget settingsGroup(String title, List<Widget> children, int expanded) {
     return StatefulBuilder(
       builder: (context, setState) {
-        return Card(
-          child: Column(
-            children: [
-              ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 0),
+          child: Card(
+            child: Column(
+              children: [
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.all(8),
+                  title: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 0),
+                    child: Text(title,
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                  trailing: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 0),
+                    child: Icon(expandedStates[expanded]
+                        ? Icons.expand_less
+                        : Icons.expand_more),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      expandedStates[expanded] = !expandedStates[expanded];
+                    });
+                  },
                 ),
-                contentPadding: const EdgeInsets.all(8),
-                title: Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 0),
-                  child: Text(title,
-                      style: Theme.of(context).textTheme.titleMedium),
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 200),
+                  firstChild: Container(),
+                  secondChild: Column(
+                    children: [
+                      const Divider(),
+                      ...children,
+                      const SizedBox(height: 8),
+                    ],
+                  ), // Shown when expanded
+                  crossFadeState: expandedStates[expanded]
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
                 ),
-                trailing: Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 0),
-                  child: Icon(expandedStates[expanded]
-                      ? Icons.expand_less
-                      : Icons.expand_more),
-                ),
-                onTap: () {
-                  setState(() {
-                    expandedStates[expanded] = !expandedStates[expanded];
-                  });
-                },
-              ),
-              AnimatedCrossFade(
-                duration: const Duration(milliseconds: 200),
-                firstChild: Container(),
-                secondChild: Column(
-                  children: [
-                    const Divider(),
-                    ...children,
-                    const SizedBox(height: 8),
-                  ],
-                ), // Shown when expanded
-                crossFadeState: expandedStates[expanded]
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -179,6 +183,10 @@ class _SettingsViewState extends State<SettingsView> {
 
   @override
   Widget build(BuildContext context) {
+    var width = MediaQuery.of(context).size.width;
+
+    var big = width > 716;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Settings"),
@@ -209,20 +217,21 @@ class _SettingsViewState extends State<SettingsView> {
                               leading: const Icon(Icons.brightness_4_rounded),
                             ));
                           }),
-                          ValueListenableBuilder(
-                          valueListenable: familiarityMode,
-                          builder: (context, value, _) {
-                            return settingsTile(Setting(
-                              "Familiarity Mode",
-                              "Swap Drawer and Navigation Rail position",
-                              Switch(
-                                  value: value,
-                                  onChanged: (value) async {
-                                    familiarityMode.value = value;
-                                    await saveSettings();
-                                  }),
-                              items: [
-                                SettingAction("On", () async {
+                      if (big)
+                        ValueListenableBuilder(
+                            valueListenable: familiarityMode,
+                            builder: (context, value, _) {
+                              return settingsTile(Setting(
+                                "Familiarity Mode",
+                                "Swap Drawer and Navigation Rail position",
+                                Switch(
+                                    value: value,
+                                    onChanged: (value) async {
+                                      familiarityMode.value = value;
+                                      await saveSettings();
+                                    }),
+                                items: [
+                                  SettingAction("On", () async {
                                     familiarityMode.value = true;
                                     await saveSettings();
                                   }),
@@ -230,11 +239,11 @@ class _SettingsViewState extends State<SettingsView> {
                                     familiarityMode.value = false;
                                     await saveSettings();
                                   })
-                              ],
-                              leading: const Icon(Icons.brightness_4_rounded),
-                              state: value,
-                            ));
-                          }),
+                                ],
+                                leading: const Icon(Icons.brightness_4_rounded),
+                                state: value,
+                              ));
+                            }),
                     ]),
                     const SizedBox(height: 16),
                     settingsSubGroup("Editor Settings", [
@@ -303,7 +312,8 @@ class _SettingsViewState extends State<SettingsView> {
                                 items: [
                                   SettingAction("On", () async {
                                     disableOnlineFeatures.value = true;
-                                    showSnackbar(context, "Restart the App to apply the changes.");
+                                    showSnackbar(context,
+                                        "Restart the App to apply the changes.");
                                     await saveSettings();
                                   }),
                                   SettingAction("Off", () async {
@@ -356,29 +366,34 @@ class _SettingsViewState extends State<SettingsView> {
                           }),
                         ],
                         leading: const Icon(Icons.help_rounded))),
-                    settingsTileTap(Setting(
+                    if (!isPlatformMobile()) settingsTileTap(Setting(
                       "Version $currentTag",
-                      disableOnlineFeatures.value? "Cannot check for Updates - Offline Mode on." : "Click to check for updates",
-                      disableOnlineFeatures.value? null : const Icon(Icons.chevron_right_rounded),
+                      disableOnlineFeatures.value
+                          ? "Cannot check for Updates - Offline Mode on."
+                          : "Click to check for updates",
+                      disableOnlineFeatures.value
+                          ? null
+                          : const Icon(Icons.chevron_right_rounded),
                       items: [
-                        if (!disableOnlineFeatures.value) SettingAction("Check for Updates", () async {
-                          var state = await isClientOutOfDate();
-                          if (context.mounted) {
-                            switch (state) {
-                              case ClientState.upToDate:
-                                showSnackbar(context, "You are up to date!");
-                                break;
-                              case ClientState.outOfDate:
-                                showUpdateDialog(context);
-                                break;
-                              case ClientState.error:
-                                showSnackbar(context,
-                                    "An error occured while checking for updates.",
-                                    color: Colors.red);
-                                break;
+                        if (!disableOnlineFeatures.value)
+                          SettingAction("Check for Updates", () async {
+                            var state = await isClientOutOfDate();
+                            if (context.mounted) {
+                              switch (state) {
+                                case ClientState.upToDate:
+                                  showSnackbar(context, "You are up to date!");
+                                  break;
+                                case ClientState.outOfDate:
+                                  showUpdateDialog(context);
+                                  break;
+                                case ClientState.error:
+                                  showSnackbar(context,
+                                      "An error occured while checking for updates.",
+                                      color: Colors.red);
+                                  break;
+                              }
                             }
-                          }
-                        })
+                          })
                       ],
                       leading: const Icon(Icons.update_rounded),
                     ))
